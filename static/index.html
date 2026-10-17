@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Submission Review Assistant</title>
+<style>
+:root {
+  --bg: #f4f5f7; --panel: #ffffff; --ink: #1d2433; --muted: #5d6779; --line: #e1e4ea; --soft: #f8f9fb;
+  --accent: #1f4fd1; --accent-ink: #ffffff; --accent-soft: #e8eefc;
+  --pass: #17663a; --pass-bg: #e3f4ea; --flag: #b3261e; --flag-bg: #fdeceb;
+  --unk: #8a5a00; --unk-bg: #fff3d6; --gray: #4b5565; --gray-bg: #eef0f3;
+  --override: #6b2fb5; --override-bg: #f1e9fc;
+  --radius: 10px; --shadow: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.06);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif; }
+button, input, textarea { font: inherit; color: inherit; }
+h1, h2, h3 { margin: 0; line-height: 1.25; }
+h2 { font-size: 15px; font-weight: 650; }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+.mono { font-family: Consolas, "SFMono-Regular", Menlo, monospace; font-size: 12.5px; }
+
+header.top { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #111a2e; color: #fff; }
+header.top h1 { font-size: 16px; font-weight: 650; letter-spacing: .1px; }
+header.top .sub { color: #aab4c8; font-size: 12.5px; }
+header.top .spacer { flex: 1; }
+.model-chip { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.08); color: #dfe5f2; font-size: 12.5px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #8a94a6; display: inline-block; }
+.dot.ok { background: #3ccf7a; } .dot.bad { background: #f0605a; }
+
+main { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; padding: 20px 24px 48px; max-width: 1500px; margin: 0 auto; }
+@media (max-width: 1000px) { main { grid-template-columns: 1fr; } .packet { position: static !important; } }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card > .hd { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.card > .hd .right { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.card > .bd { padding: 14px 16px; }
+
+.packet { position: sticky; top: 16px; align-self: start; }
+.drop { border: 1.5px dashed #b9c1d0; border-radius: 8px; padding: 18px 12px; text-align: center; background: var(--soft);
+  cursor: pointer; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop strong { display: block; font-weight: 600; margin-bottom: 2px; }
+.filelist { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.filelist li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.filelist li .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.x { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; padding: 0 2px; }
+.x:hover { color: var(--flag); }
+label.fl { display: block; font-weight: 600; margin: 14px 0 6px; }
+textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical; background: #fff; }
+textarea:focus, input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.actions { display: flex; gap: 8px; margin-top: 14px; }
+
+.btn { border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 7px 12px; cursor: pointer; font-weight: 550; white-space: nowrap; }
+.btn:hover { background: var(--soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.sm { padding: 4px 9px; font-size: 12.5px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.grow { flex: 1; }
+
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; white-space: nowrap; }
+.PASS, .KNOWN { color: var(--pass); background: var(--pass-bg); }
+.FLAG, .MISSING { color: var(--flag); background: var(--flag-bg); }
+.UNKNOWN, .CONFLICT, .INVALID { color: var(--unk); background: var(--unk-bg); }
+.NOT_EXTRACTED, .neutral { color: var(--gray); background: var(--gray-bg); }
+.OVERRIDE { color: var(--override); background: var(--override-bg); }
+
+.results { display: grid; gap: 16px; min-width: 0; }
+.empty { padding: 56px 24px; text-align: center; color: var(--muted); }
+.empty h2 { color: var(--ink); font-size: 17px; margin-bottom: 6px; }
+.empty ol { display: inline-block; text-align: left; margin: 10px 0 0; }
+
+.state-box { padding: 18px; display: flex; gap: 12px; align-items: center; }
+.spinner { width: 22px; height: 22px; border: 3px solid var(--accent-soft); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.alert { border-radius: var(--radius); padding: 12px 14px; border: 1px solid; }
+.alert.err { background: var(--flag-bg); border-color: #f3c3bf; color: #7a1a14; }
+.alert.warn { background: var(--unk-bg); border-color: #f1d998; color: #5c3d00; }
+.alert b { display: block; margin-bottom: 2px; }
+.alert ul { margin: 4px 0 0; padding-left: 18px; }
+
+.banner { display: flex; align-items: center; gap: 18px; padding: 16px 18px; flex-wrap: wrap; border-left: 6px solid var(--gray); }
+.banner.ready { border-left-color: var(--pass); }
+.banner.needs { border-left-color: var(--unk); }
+.banner .status { font-size: 20px; font-weight: 750; letter-spacing: .3px; }
+.banner.ready .status { color: var(--pass); } .banner.needs .status { color: var(--unk); }
+.banner .counts { display: flex; gap: 6px; }
+.banner .disc { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+.calls { display: flex; flex-wrap: wrap; gap: 6px 14px; flex-basis: 100%; font-size: 12.5px; color: var(--muted); }
+.calls span { display: inline-flex; gap: 5px; align-items: center; }
+
+.summary .label-ai { color: var(--accent); background: var(--accent-soft); }
+.summary .label-tpl { color: var(--unk); background: var(--unk-bg); }
+.summary .statusline { font-weight: 650; margin-bottom: 6px; }
+.summary .grp { margin-top: 10px; }
+.summary .grp h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.summary ul { margin: 0; padding-left: 18px; }
+.summary .disc { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+.stale { color: var(--unk); background: var(--unk-bg); }
+
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 650; background: var(--soft); }
+tr:last-child td { border-bottom: 0; }
+.tbl-wrap { overflow-x: auto; }
+.inputs { display: grid; gap: 3px; font-size: 12.5px; }
+
+.field-row td:first-child { width: 190px; font-weight: 600; }
+.val { font-weight: 600; font-size: 14.5px; }
+.val.none { color: var(--muted); font-weight: 500; font-style: italic; }
+.ev { margin-top: 6px; display: grid; gap: 4px; }
+.ev-item { border-left: 3px solid #c8cfdb; padding: 2px 0 2px 8px; font-size: 12.5px; }
+.ev-item .loc { color: var(--muted); }
+.ev-item q { display: block; quotes: none; font-family: Consolas, Menlo, monospace; font-size: 12px; color: #2b3445; }
+.alts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 6px; }
+.alt { border: 1px solid #f1d998; background: #fffbef; border-radius: 8px; padding: 8px 10px; }
+.alt .v { font-weight: 700; }
+.alt.bad { border-color: var(--line); background: var(--soft); }
+.notes { margin: 6px 0 0; padding-left: 16px; color: var(--muted); font-size: 12.5px; }
+.orig { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+.edit { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.edit input { flex: 1; min-width: 140px; border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+.edit .msg { flex-basis: 100%; color: var(--flag); font-size: 12.5px; }
+.rowbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+.pending { color: var(--accent); font-weight: 600; font-size: 12.5px; }
+
+.draft input.subject { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-bottom: 8px; font-weight: 600; }
+.draft textarea { min-height: 260px; font-family: inherit; }
+.draft-tag { color: var(--flag); background: var(--flag-bg); }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Underwriter Submission Review Assistant</h1>
+    <div class="sub">Commercial auto · fictional exercise · readiness for human review only</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="model-chip" id="modelChip"><span class="dot" id="modelDot"></span><span id="modelText">Model: checking…</span></span>
+</header>
+
+<main>
+  <!-- Packet panel -->
+  <section class="card packet" aria-label="Submission packet">
+    <div class="hd"><h2>Submission packet</h2></div>
+    <div class="bd">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add files">
+        <strong>Drop files here or click to browse</strong>
+        <span class="muted small">Broker email (.txt/.eml), application &amp; loss runs (.pdf), vehicle schedule (.csv)</span>
+      </div>
+      <input type="file" id="fileInput" multiple class="hidden" accept=".pdf,.csv,.txt,.eml">
+      <ul class="filelist" id="fileList"></ul>
+      <label class="fl" for="emailText">Or paste the broker email</label>
+      <textarea id="emailText" rows="7" placeholder="Paste the email text here (optional if the .txt/.eml is uploaded)"></textarea>
+      <div class="actions">
+        <button class="btn primary grow" id="processBtn">Process submission</button>
+        <button class="btn" id="newBtn" title="Clear everything">New submission</button>
+      </div>
+      <p class="muted small" style="margin:12px 0 0">One packet at a time. Files are processed in memory and nothing is stored. Document text is sent to the configured model for extraction.</p>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="results" id="results" aria-live="polite"></section>
+</main>
+
+<script>
+"use strict";
+// ------------------------------------------------------------------ state
+const S = { files: [], result: null, fields: null, evaluation: null, narrative: null,
+            narrativeStale: false, pendingRerun: false, editing: null, req: 0 };
+const FIELD_ORDER = ["business_name", "requested_effective_date", "garaging_state", "operations_description",
+  "declared_vehicle_count", "operating_radius_miles", "hazardous_materials", "schedule_vehicle_count", "loss_runs_present"];
+const DERIVED = new Set(["schedule_vehicle_count", "loss_runs_present"]);
+const $ = (id) => document.getElementById(id);
+
+// Build DOM safely: all text goes through textContent (document text is untrusted).
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") n.className = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) {
+    if (c === null || c === undefined || c === false) continue;
+    n.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return n;
+}
+const chip = (text, cls) => el("span", { class: "chip " + (cls || text) }, text);
+
+async function api(path, opts) {
+  const res = await fetch(path, opts);
+  let body = null;
+  try { body = await res.json(); } catch (_) { /* non-JSON */ }
+  if (!res.ok) {
+    const d = body && body.detail;
+    throw new Error(typeof d === "string" ? d : (d ? JSON.stringify(d) : `HTTP ${res.status}`));
+  }
+  return body;
+}
+const postJSON = (path, data) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+
+// ------------------------------------------------------------------ model chip
+api("/api/config").then((c) => {
+  $("modelText").textContent = `${c.provider} · ${c.model}` + (c.key_configured ? "" : " · API key not set");
+  $("modelDot").className = "dot " + (c.key_configured ? "ok" : "bad");
+}).catch(() => { $("modelText").textContent = "Model: config unavailable"; $("modelDot").className = "dot bad"; });
+
+// ------------------------------------------------------------------ packet panel
+function renderFiles() {
+  const list = $("fileList");
+  list.replaceChildren(...S.files.map((f, i) => el("li", {},
+    el("span", { class: "name", title: f.name }, f.name),
+    el("span", { class: "muted small" }, (f.size / 1024).toFixed(1) + " KB"),
+    el("button", { class: "x", title: "Remove", "aria-label": "Remove " + f.name,
+      onclick: () => { S.files.splice(i, 1); renderFiles(); } }, "×"))));
+}
+function addFiles(fileList) {
+  for (const f of fileList) {
+    if (!S.files.some((g) => g.name === f.name && g.size === f.size)) S.files.push(f);
+  }
+  renderFiles();
+}
+const drop = $("drop"), input = $("fileInput");
+drop.addEventListener("click", () => input.click());
+drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+input.addEventListener("change", () => { addFiles(input.files); input.value = ""; });
+["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (e) => addFiles(e.dataTransfer.files));
+
+function resetResults() {
+  Object.assign(S, { result: null, fields: null, evaluation: null, narrative: null,
+                     narrativeStale: false, pendingRerun: false, editing: null });
+  S.req++;  // any in-flight response for the old packet is ignored
+}
+$("newBtn").addEventListener("click", () => {
+  resetResults();
+  S.files = []; renderFiles(); $("emailText").value = ""; input.value = "";
+  render();
+});
+$("processBtn").addEventListener("click", processPacket);
+
+async function processPacket() {
+  const email = $("emailText").value;
+  if (!S.files.length && !email.trim()) { showError("Nothing to process", "Add the submission files and/or paste the broker email."); return; }
+  resetResults();  // never show the previous applicant while the new one loads
+  const my = S.req;
+  const fd = new FormData();
+  S.files.forEach((f) => fd.append("files", f, f.name));
+  if (email.trim()) fd.append("email_text", email);
+  $("processBtn").disabled = true;
+  $("results").replaceChildren(el("div", { class: "card state-box" }, el("div", { class: "spinner" }),
+    el("div", {}, el("b", {}, "Processing submission…"),
+      el("div", { class: "muted small" }, "Reading files, extracting fields with the model, verifying evidence, running checks. This usually takes 5–30 seconds."))));
+  try {
+    const r = await api("/api/process", { method: "POST", body: fd });
+    if (my !== S.req) return;
+    S.result = r; S.fields = r.fields; S.narrative = r.narrative;
+    S.evaluation = { rules: r.rules, overall_status: r.overall_status, rule_counts: r.rule_counts, issues: r.issues, disclaimer: r.disclaimer };
+    render();
+  } catch (e) {
+    if (my !== S.req) return;
+    showError("Processing failed", e.message);
+  } finally { $("processBtn").disabled = false; }
+}
+function showError(title, msg) {
+  $("results").replaceChildren(el("div", { class: "alert err", role: "alert" }, el("b", {}, title), msg));
+}
+
+// ------------------------------------------------------------------ render
+function render() {
+  const root = $("results");
+  if (!S.result) {
+    root.replaceChildren(el("div", { class: "card empty" },
+      el("h2", {}, "No submission loaded"),
+      el("div", {}, "Add one packet's files on the left, then choose Process submission."),
+      el("ol", { class: "small" },
+        el("li", {}, "Fields are extracted by the model and checked against the source text"),
+        el("li", {}, "Rules R1–R5 run in code"),
+        el("li", {}, "Review evidence, correct values, rerun checks"),
+        el("li", {}, "Copy the draft broker email (never sent)"))));
+    return;
+  }
+  root.replaceChildren(banner(), failures(), summaryCard(), rulesCard(), fieldsCard(), inventoryCard(), draftCard());
+}
+
+function banner() {
+  const ev = S.evaluation, r = S.result;
+  const ready = ev.overall_status === "READY_FOR_REVIEW";
+  const calls = r.extraction.map((x) => el("span", {}, el("span", { class: "dot " + (x.status === "ok" ? "ok" : "bad") }),
+    `Extraction · ${x.source_file}: ${x.status === "ok" ? "ok" : "failed (" + x.error_kind + ")"}`));
+  const n = S.narrative;
+  calls.push(el("span", {}, el("span", { class: "dot " + (n.source === "model" ? "ok" : "bad") }),
+    "Summary & draft: " + (n.source === "model" ? "model" : "template (model unavailable)")));
+  calls.push(el("span", {}, `Model: ${r.model.provider || "none"} · ${r.model.model || "—"}`));
+  return el("div", { class: "card banner " + (ready ? "ready" : "needs") },
+    el("div", {}, el("div", { class: "muted small" }, "Overall status"), el("div", { class: "status" }, ev.overall_status)),
+    el("div", { class: "counts" }, chip(ev.rule_counts.PASS + " PASS", "PASS"), chip(ev.rule_counts.FLAG + " FLAG", "FLAG"), chip(ev.rule_counts.UNKNOWN + " UNKNOWN", "UNKNOWN")),
+    S.pendingRerun ? el("span", { class: "pending" }, "Corrections pending — rerun checks to update") : null,
+    el("div", { class: "disc" }, ev.disclaimer),
+    el("div", { class: "calls" }, calls));
+}
+
+function failures() {
+  const r = S.result;
+  const failed = r.extraction.filter((x) => x.status !== "ok");
+  const box = el("div", { class: "results", style: "gap:10px" });
+  if (failed.length) {
+    box.append(el("div", { class: "alert err", role: "alert" },
+      el("b", {}, "Model extraction failed for " + failed.length + " of " + r.extraction.length + " source(s)"),
+      el("ul", {}, failed.map((x) => el("li", {}, `${x.source_file}: ${x.message || x.error_kind}`))),
+      el("div", { class: "small" }, "Deterministic results (inventory, schedule count, loss runs) are kept. Fields that could not be checked are marked NOT_EXTRACTED or not cross-checked; you can enter corrections and rerun checks.")));
+  }
+  if (r.warnings.length) {
+    box.append(el("div", { class: "alert warn" }, el("b", {}, "Warnings"),
+      el("ul", {}, r.warnings.map((w) => el("li", {}, w)))));
+  }
+  return box.childElementCount ? box : document.createDocumentFragment();
+}
+
+function summaryCard() {
+  const n = S.narrative;
+  const isModel = n.source === "model";
+  const body = el("div", { class: "bd" },
+    !isModel ? el("div", { class: "alert warn", style: "margin-bottom:10px" }, el("b", {}, "Template draft — model unavailable, not AI-generated"),
+      (n.error || "").replace(/^Template draft[^.]*\.\s*/, ""), n.validation_errors && n.validation_errors.length ? el("ul", {}, n.validation_errors.map((e) => el("li", {}, e))) : null) : null,
+    el("div", { class: "statusline" }, n.status_line),
+    el("div", {}, n.snapshot));
+  for (const g of n.issue_groups) {
+    body.append(el("div", { class: "grp" }, el("h3", {}, g.group), el("ul", {}, g.lines.map((l) => el("li", {}, l)))));
+  }
+  if (!n.issue_groups.length) body.append(el("div", { class: "grp muted" }, "No blocking issues."));
+  if (n.overrides.length) {
+    body.append(el("div", { class: "grp" }, el("h3", {}, "Overrides applied"), el("ul", {}, n.overrides.map((l) => el("li", {}, l)))));
+  }
+  body.append(el("div", { class: "disc" }, n.disclaimer));
+  return el("div", { class: "card summary" },
+    el("div", { class: "hd" }, el("h2", {}, "Underwriter summary"),
+      isModel ? chip("AI-GENERATED · " + (S.result.model.model || ""), "label-ai") : chip("TEMPLATE · NOT AI-GENERATED", "label-tpl"),
+      el("div", { class: "right" },
+        S.narrativeStale ? chip("STALE — checks were rerun", "stale") : null,
+        el("button", { class: "btn sm", onclick: regenerate, id: "regenBtn" }, "Regenerate"))),
+    body);
+}
+
+function rulesCard() {
+  const rows = S.evaluation.rules.map((r) => el("tr", {},
+    el("td", { class: "mono" }, r.id),
+    el("td", {}, r.name),
+    el("td", {}, chip(r.status)),
+    el("td", {}, r.reason),
+    el("td", {}, el("div", { class: "inputs" }, r.inputs_used.map((i) => el("div", {},
+      el("span", { class: "mono" }, i.field), " = ", fmtVal(i.value), " ", chip(i.state),
+      i.override ? [" ", chip("HUMAN OVERRIDE", "OVERRIDE")] : null,
+      !i.cross_checked ? [" ", chip("NOT CROSS-CHECKED", "neutral")] : null))))));
+  return el("div", { class: "card" }, el("div", { class: "hd" }, el("h2", {}, "Rule checks (R1–R5)"),
+      el("span", { class: "muted small" }, "Deterministic code — no model involved")),
+    el("div", { class: "tbl-wrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, ["Rule", "Name", "Status", "Reason", "Inputs used"].map((h) => el("th", {}, h)))),
+      el("tbody", {}, rows))));
+}
+function fmtVal(v) {
+  if (v === null || v === undefined) return el("span", { class: "muted" }, "null");
+  if (typeof v === "boolean") return v ? "true" : "false";
+  return String(v);
+}
+
+function evidenceList(evs) {
+  if (!evs || !evs.length) return null;
+  return el("div", { class: "ev" }, evs.map((e) => el("div", { class: "ev-item" },
+    el("span", { class: "loc" }, `${e.source_file} · ${e.locator}`),
+    el("q", {}, e.excerpt_or_observation))));
+}
+
+function fieldsCard() {
+  const rows = FIELD_ORDER.filter((k) => S.fields[k]).map((k) => fieldRow(S.fields[k]));
+  return el("div", { class: "card" },
+    el("div", { class: "hd" }, el("h2", {}, "Extracted fields & evidence"),
+      el("div", { class: "right" },
+        S.pendingRerun ? el("span", { class: "pending" }, "Corrections pending") : null,
+        el("button", { class: "btn primary sm", onclick: rerun, disabled: !S.pendingRerun ? true : null, id: "rerunBtn" }, "Rerun checks"))),
+    el("div", { class: "tbl-wrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, ["Field", "Value · state · evidence", ""].map((h) => el("th", {}, h)))),
+      el("tbody", {}, rows))));
+}
+
+function fieldRow(f) {
+  const ov = f.override;
+  const shown = f.effective_display;
+  const valueLine = el("div", {},
+    shown !== null && shown !== undefined && (f.effective_state === "KNOWN")
+      ? el("span", { class: "val" }, shown) : el("span", { class: "val none" }, f.effective_state === "CONFLICT" ? "unresolved — sources disagree" : "no value"),
+    " ", ov ? chip("HUMAN OVERRIDE", "OVERRIDE") : chip(f.state),
+    !ov && f.state === "KNOWN" && !f.cross_checked ? [" ", chip("NOT CROSS-CHECKED", "neutral")] : null,
+    DERIVED.has(f.name) ? el("span", { class: "muted small" }, "  · derived by code") : null);
+
+  const cell = el("td", {}, valueLine);
+  if (ov) {
+    cell.append(el("div", { class: "orig" }, "Original extraction: ",
+      el("b", {}, f.state === "KNOWN" ? (f.display ?? String(f.value)) : f.state), " — kept below for reference."));
+  }
+  if (f.alternatives.length && f.state === "CONFLICT") {
+    cell.append(el("div", { class: "alts" }, f.alternatives.map((a) => el("div", { class: "alt" + (a.valid ? "" : " bad") },
+      el("div", { class: "v" }, a.display || "(blank)"), !a.valid ? el("div", { class: "small muted" }, a.error || "unusable") : null,
+      evidenceList(a.evidence)))));
+  } else {
+    const evl = evidenceList(f.evidence);
+    if (evl) cell.append(evl);
+  }
+  if (f.notes.length) cell.append(el("ul", { class: "notes" }, f.notes.map((n) => el("li", {}, n))));
+  if (f.sources_checked.length && (f.state === "MISSING" || f.state === "NOT_EXTRACTED")) {
+    cell.append(el("div", { class: "small muted", style: "margin-top:4px" }, "Sources inspected: " + f.sources_checked.join(", ")));
+  }
+  if (S.editing === f.name) cell.append(editor(f));
+
+  const btns = el("td", { class: "rowbtns", style: "width:150px" },
+    el("button", { class: "btn sm", onclick: () => { S.editing = f.name; render(); } }, ov ? "Edit" : "Correct"),
+    ov ? el("button", { class: "btn sm", onclick: () => doOverride(f, { revert: true }) }, "Revert") : null);
+  return el("tr", { class: "field-row" }, el("td", {}, f.label, el("div", { class: "mono muted" }, f.name)), cell, btns);
+}
+
+function editor(f) {
+  const inp = el("input", { type: "text", placeholder: hint(f.name), "aria-label": "Corrected value for " + f.label,
+    value: f.override && !f.override.confirmed_absent ? f.override.display : "" });
+  const msg = el("div", { class: "msg" });
+  const save = () => doOverride(f, { value: inp.value }, msg);
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { S.editing = null; render(); } });
+  requestAnimationFrame(() => requestAnimationFrame(() => inp.focus()));
+  return el("div", { class: "edit" }, inp,
+    el("button", { class: "btn primary sm", onclick: save }, "Save"),
+    el("button", { class: "btn sm", onclick: () => doOverride(f, { confirm_absent: true }, msg) }, "Confirm absent"),
+    el("button", { class: "btn sm", onclick: () => { S.editing = null; render(); } }, "Cancel"), msg);
+}
+function hint(name) {
+  return ({ requested_effective_date: "YYYY-MM-DD", garaging_state: "e.g. CA or California", declared_vehicle_count: "whole number",
+    operating_radius_miles: "miles, e.g. 150", hazardous_materials: "Yes or No", schedule_vehicle_count: "whole number",
+    loss_runs_present: "Yes or No" })[name] || "corrected value";
+}
+
+async function doOverride(f, opts, msgEl) {
+  const my = S.req;
+  try {
+    const updated = await postJSON("/api/override", { field: f, value: opts.value ?? null,
+      confirm_absent: !!opts.confirm_absent, revert: !!opts.revert });
+    if (my !== S.req) return;
+    S.fields = { ...S.fields, [f.name]: updated };
+    S.editing = null; S.pendingRerun = true;
+    render();
+  } catch (e) {
+    if (my !== S.req) return;
+    if (msgEl) msgEl.textContent = e.message; else alert(e.message);
+  }
+}
+
+async function rerun() {
+  const my = S.req;
+  $("rerunBtn").disabled = true;
+  try {
+    const ev = await postJSON("/api/rerun", { fields: S.fields });
+    if (my !== S.req) return;
+    S.evaluation = ev; S.pendingRerun = false; S.narrativeStale = true;
+    render();
+  } catch (e) { if (my === S.req) alert("Rerun failed: " + e.message); }
+}
+
+async function regenerate() {
+  const my = S.req, btn = $("regenBtn");
+  btn.disabled = true; btn.textContent = "Generating…";
+  try {
+    const n = await postJSON("/api/narrative", { fields: S.fields });
+    if (my !== S.req) return;
+    S.narrative = n; S.narrativeStale = false;
+    if (S.pendingRerun) {  // narrative is built from the current fields; keep rules in step
+      S.evaluation = await postJSON("/api/rerun", { fields: S.fields }); S.pendingRerun = false;
+    }
+    render();
+  } catch (e) { if (my === S.req) { alert("Regenerate failed: " + e.message); btn.disabled = false; btn.textContent = "Regenerate"; } }
+}
+
+function inventoryCard() {
+  const rows = S.result.inventory.map((a) => el("tr", {},
+    el("td", {}, a.filename), el("td", {}, a.detected_type.replace("_", " ")),
+    el("td", {}, a.readable ? chip("yes", "PASS") : chip("no", "FLAG")),
+    el("td", {}, a.pages != null ? a.pages + " page(s)" : a.rows != null ? a.rows + (a.detected_type === "vehicle_schedule" ? " data row(s)" : " line(s)") : "—"),
+    el("td", { class: "muted small" }, a.note || "")));
+  return el("div", { class: "card" }, el("div", { class: "hd" }, el("h2", {}, "Attachment inventory"),
+      el("span", { class: "muted small" }, "Document type is detected from each file's heading, not its name")),
+    el("div", { class: "tbl-wrap" }, el("table", {},
+      el("thead", {}, el("tr", {}, ["File", "Detected type", "Readable", "Size", "Note"].map((h) => el("th", {}, h)))),
+      el("tbody", {}, rows))));
+}
+
+function draftCard() {
+  const n = S.narrative;
+  const card = el("div", { class: "card draft" }, el("div", { class: "hd" }, el("h2", {}, "Draft broker email"),
+    chip("DRAFT ONLY — NOT SENT", "draft-tag"),
+    n.source === "model" ? chip("AI-GENERATED", "label-ai") : chip("TEMPLATE · NOT AI-GENERATED", "label-tpl"),
+    S.narrativeStale ? chip("STALE", "stale") : null,
+    el("div", { class: "right" }, el("button", { class: "btn sm", id: "copyBtn", onclick: copyDraft }, "Copy"))));
+  if (!n.email_body) {
+    card.append(el("div", { class: "bd muted" }, "No missing, conflicting or flagged items — no broker follow-up needed."));
+    return card;
+  }
+  card.append(el("div", { class: "bd" },
+    el("input", { class: "subject", id: "draftSubject", "aria-label": "Email subject", value: n.email_subject,
+      oninput: (e) => { n.email_subject = e.target.value; } }),
+    el("textarea", { id: "draftBody", "aria-label": "Email body", oninput: (e) => { n.email_body = e.target.value; } }, n.email_body)));
+  return card;
+}
+async function copyDraft() {
+  const subj = $("draftSubject") ? $("draftSubject").value : "", body = $("draftBody") ? $("draftBody").value : "";
+  const text = (subj ? "Subject: " + subj + "\n\n" : "") + body;
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) { const t = $("draftBody"); if (t) { t.select(); document.execCommand("copy"); } }
+  const b = $("copyBtn"); b.textContent = "Copied"; setTimeout(() => { b.textContent = "Copy"; }, 1500);
+}
+
+render();
+</script>
+</body>
+</html>

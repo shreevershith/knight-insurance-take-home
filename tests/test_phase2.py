@@ -323,3 +323,10 @@ def test_real_client_without_key_fails_cleanly(monkeypatch):
     r = run("SUB-A", client_from_env())
     assert {e.error_kind for e in r.extraction} == {"config"}
     assert r.model.provider == "Groq" and r.narrative.source == "template"
+
+
+def test_validator_rejects_bare_label_lines():
+    fields, rules, overall, issues = _sub_c_inputs()
+    out = _good_output(issues)
+    out.issue_lines = [f"{i.label}: " + ", ".join(i.values) for i in issues]  # e.g. 'Hazardous materials: No, Yes'
+    assert any("not a complete sentence" in e for e in validate_narrative(out, issues, fields, overall))

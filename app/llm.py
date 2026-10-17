@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 log = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://api.groq.com/openai/v1"
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "openai/gpt-oss-120b"  # llama-3.3-70b-versatile has been retired by Groq
 DEFAULT_TIMEOUT = 30.0
 
 # Error kinds worth one more attempt.
@@ -126,7 +126,8 @@ class OpenAICompatibleClient:
             raise LLMError("connection", f"Could not connect to {self.config.base_url}.")
         except openai.APIStatusError as exc:
             kind = "server" if exc.status_code >= 500 else "other"
-            raise LLMError(kind, f"Provider returned HTTP {exc.status_code}.")
+            detail = (getattr(exc, "message", "") or "")[:200]
+            raise LLMError(kind, f"Provider returned HTTP {exc.status_code}" + (f": {detail}" if detail else "."))
         content = (resp.choices[0].message.content or "") if resp.choices else ""
         if not content.strip():
             raise LLMError("bad_json", "Model returned an empty response.")

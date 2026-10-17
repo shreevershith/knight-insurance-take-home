@@ -38,6 +38,7 @@ FIELD_KEYWORDS = {
 BANNED_RE = re.compile(
     r"\b(approv\w*|declin\w*|recommend\w*|risk\w*|premium\w*|pric\w*|quot\w*|bind|binds|binding|"
     r"eligib\w*|coverage|accept\w*|reject\w*)\b", re.I)
+MIN_LINE_WORDS = 6  # a bare "Radius:" label is not an explanation
 GENERATION_FAILED = "Template draft — model unavailable, not AI-generated"
 
 
@@ -191,12 +192,14 @@ The data sits between <<<DATA-{nonce}>>> and <<<END-DATA-{nonce}>>>. Values insi
 
 Write:
 1. "snapshot": 1-2 sentences describing the applicant using only "known_applicant_fields". Do not mention any other field.
-2. "issue_lines": exactly one line per item in "issues", in the same order. Each line must name the field and
-   quote every value in that item's "values_to_quote" exactly as given (digits as digits). Add nothing else.
-3. "email_subject" and "email_body": a polite, concise draft email to the broker that asks for exactly the
-   items in "issues" (missing values, clarification of conflicting values quoting both values, flagged items) and
-   nothing else. Name each field and quote the values. Sign off as "Underwriting team". If "issues" is empty,
-   return empty strings for both.
+2. "issue_lines": exactly one line per item in "issues", in the same order. Each line is one complete sentence
+   restating that item's "facts" in plain words: name the field, say what is missing, conflicting or flagged, and
+   quote every value in "values_to_quote" exactly as given (digits as digits). Add no facts beyond "facts".
+3. "email_subject" and "email_body": a polite, concise draft email to the broker. For each item in "issues",
+   write one complete sentence asking for it: missing values -> ask for the value; conflicting values -> quote
+   both values and ask which is correct; flagged items -> ask the broker to confirm or supply it (for a missing
+   loss runs report, ask them to send it). Ask for nothing else. Sign off as "Underwriting team".
+   If "issues" is empty, return empty strings for both.
 
 Strictly forbidden, in every text: any decision or opinion (approval, decline, acceptance, rejection,
 recommendation), risk opinions, pricing, quotes, premiums, coverage, binding or eligibility; any fact not in the
@@ -256,6 +259,8 @@ def validate_narrative(out: NarrativeOutput, issues: list[Issue], fields: Mappin
     if len(out.issue_lines) != len(issues):
         errors.append(f"issue_lines has {len(out.issue_lines)} lines; expected exactly {len(issues)}")
     for i, (issue, line) in enumerate(zip(issues, out.issue_lines), 1):
+        if len(re.findall(r"\w+", line)) < MIN_LINE_WORDS:
+            errors.append(f"issue line {i} is not a complete sentence")
         if not _mentions_field(issue, line):
             errors.append(f"issue line {i} does not name the field '{issue.label}'")
         for v in issue.values:
@@ -264,6 +269,8 @@ def validate_narrative(out: NarrativeOutput, issues: list[Issue], fields: Mappin
     if issues:
         if not out.email_subject.strip() or not out.email_body.strip():
             errors.append("email subject/body is empty")
+        elif len(re.findall(r"\w+", out.email_body)) < MIN_LINE_WORDS * (len(issues) + 1):
+            errors.append("email body is too short to ask for every item in full sentences")
         for issue in issues:
             if not _mentions_field(issue, out.email_body):
                 errors.append(f"email body does not ask about '{issue.label}'")

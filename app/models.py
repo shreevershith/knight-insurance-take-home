@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 
 class FieldState(str, Enum):
@@ -113,11 +113,13 @@ class FieldResult(BaseModel):
     unchecked_sources: list[str] = Field(default_factory=list)
     override: Optional[Override] = None
 
+    @computed_field  # serialized so the UI and rerun requests see the effective view
     @property
     def cross_checked(self) -> bool:
         """False when a KNOWN value could not be compared against every source."""
         return not self.unchecked_sources
 
+    @computed_field  # serialized so the UI and rerun requests see the effective view
     @property
     def resolved(self) -> bool:
         """What the rules treat as a usable value: KNOWN and cross-checked, or overridden.
@@ -129,17 +131,26 @@ class FieldResult(BaseModel):
             return not self.override.confirmed_absent
         return self.state == FieldState.KNOWN and self.cross_checked
 
+    @computed_field  # serialized so the UI and rerun requests see the effective view
     @property
     def effective_value(self) -> Any:
         if self.override is not None:
             return None if self.override.confirmed_absent else self.override.value
         return self.value
 
+    @computed_field  # serialized so the UI and rerun requests see the effective view
     @property
     def effective_state(self) -> FieldState:
         if self.override is not None:
             return FieldState.MISSING if self.override.confirmed_absent else FieldState.KNOWN
         return self.state
+
+    @computed_field
+    @property
+    def effective_display(self) -> Optional[str]:
+        if self.override is not None:
+            return self.override.display
+        return self.display
 
 
 class AttachmentInfo(BaseModel):

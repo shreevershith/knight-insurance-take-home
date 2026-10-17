@@ -31,7 +31,7 @@ _STATE_WORDS = {
 def _input(f: FieldResult) -> RuleInput:
     return RuleInput(field=f.name, value=f.effective_value, state=f.effective_state,
                      override=f.override is not None,
-                     cross_checked=f.override is not None or f.cross_checked)
+                     cross_checked=f.override is not None or f.state != FieldState.KNOWN or f.cross_checked)
 
 
 def _desc(f: FieldResult) -> str:
