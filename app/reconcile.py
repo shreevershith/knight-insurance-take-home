@@ -87,8 +87,8 @@ def reconcile_field(
         )
     inspected = ", ".join(sources_checked) or "no text sources"
     evidence = [m.evidence for m in absent] + [Evidence(
-        source_file="(packet)", locator="sources inspected",
-        excerpt_or_observation=f"No value found in: {inspected}",
+        source_file="(packet)", locator=f"text sources read: {inspected}",
+        excerpt_or_observation="No value for this field in any of them.",
     )]
     return FieldResult(**base, value=None, state=FieldState.MISSING, evidence=evidence, notes=notes)
 

@@ -71,7 +71,7 @@ Every model call uses temperature 0 and JSON mode, has a timeout, and is retried
 3. **Verify evidence (code).** Every mention must be found in the source text.
    - The excerpt must match a source line exactly (ignoring case, spacing and edge punctuation) or closely (similarity ≥ 0.85).
    - **The value itself must also be on that line.** A near-copy of a real line with a different number, such as "…radius miles 180" when the PDF says 80, is rejected.
-   - The evidence shown is the **real source line**, with a locator computed by code (`PDF page 1`, `email body, line 13`, `CSV data rows 1-3 (header excluded)`, `uploaded attachment inventory`).
+   - The evidence shown is the **real source line**, with a locator computed by code (`PDF page 1`, `email body, line 13`, `CSV data rows 1-3 (header excluded)`, and for absent items `attachment inventory: <every item received>`).
    - Mentions that fail are discarded with a visible warning.
 4. **Normalize and reconcile (code).**
    - Values are normalized: dates to `YYYY-MM-DD` (impossible dates are INVALID), states to 2-letter codes, counts to whole numbers, radius to miles (150 = 150.0), Yes/No to booleans.

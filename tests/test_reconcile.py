@@ -22,7 +22,7 @@ def test_missing_lists_sources_and_not_provided_excerpts():
     f = reconcile_field("hazardous_materials", ms, SOURCES)
     assert f.state == FieldState.MISSING and f.value is None
     assert len(f.evidence) == 3
-    assert all(s in f.evidence[-1].excerpt_or_observation for s in SOURCES)
+    assert all(s in f.evidence[-1].locator for s in SOURCES)  # "text sources read: ..."
 
 
 def test_names_case_insensitive_known():

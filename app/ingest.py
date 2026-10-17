@@ -139,7 +139,7 @@ def ingest_packet(files: list[tuple[str, bytes]], pasted_email: Optional[str] = 
 
     if len(packet.csv_files) > 1:
         packet.warnings.append("More than one CSV supplied; schedule count is INVALID.")
-    packet.schedule = derive_schedule_count(packet.csv_files)
+    packet.schedule = derive_schedule_count(packet.csv_files, [a.filename for a in packet.inventory])
     packet.loss_runs = derive_loss_runs(packet)
     return packet
 
@@ -202,6 +202,7 @@ def derive_loss_runs(packet: Packet) -> FieldResult:
     inventory_obs = "; ".join(
         f"{a.filename} ({a.detected_type}{'' if a.readable else ', unreadable'})" for a in packet.inventory
     ) or "no files"
+    received_locator = "attachment inventory: " + (", ".join(a.filename for a in packet.inventory) or "nothing received")
     # Email statements about loss runs are recorded as observations only - they never count.
     email_notes: list[Evidence] = []
     for src in packet.sources:
@@ -222,12 +223,12 @@ def derive_loss_runs(packet: Packet) -> FieldResult:
             **base, value=None, state=FieldState.INVALID,
             notes=[f"Could not determine whether these attachments are loss runs: {names} "
                    "(unreadable or document type not identifiable)."],
-            evidence=[Evidence(source_file="(packet)", locator="uploaded attachment inventory",
+            evidence=[Evidence(source_file="(packet)", locator=received_locator,
                                excerpt_or_observation=inventory_obs)] + email_notes,
         )
     return FieldResult(
         **base, value=False, display="No", state=FieldState.KNOWN,
-        evidence=[Evidence(source_file="(packet)", locator="uploaded attachment inventory",
-                           excerpt_or_observation=f"No loss runs / loss history report among supplied files: {inventory_obs}")]
+        evidence=[Evidence(source_file="(packet)", locator=received_locator,
+                           excerpt_or_observation="No loss runs / loss history report among the items received.")]
         + email_notes,
     )

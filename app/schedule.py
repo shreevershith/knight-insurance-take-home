@@ -47,8 +47,8 @@ def parse_schedule(text: str) -> ScheduleParse:
     return result
 
 
-def derive_schedule_count(csv_files: list[tuple[str, str]]) -> FieldResult:
-    """csv_files: list of (filename, decoded text)."""
+def derive_schedule_count(csv_files: list[tuple[str, str]], received: list[str] | None = None) -> FieldResult:
+    """csv_files: list of (filename, decoded text); received: every item in the packet (for absence evidence)."""
     name = "schedule_vehicle_count"
     base = dict(name=name, label=FIELD_LABELS[name], sources_checked=[f for f, _ in csv_files])
     if not csv_files:
@@ -57,7 +57,7 @@ def derive_schedule_count(csv_files: list[tuple[str, str]]) -> FieldResult:
             state=FieldState.MISSING,
             evidence=[Evidence(
                 source_file="(packet)",
-                locator="uploaded attachment inventory",
+                locator="attachment inventory: " + (", ".join(received) if received else "nothing received"),
                 excerpt_or_observation="No vehicle schedule CSV was supplied in this packet.",
             )],
         )
@@ -68,7 +68,7 @@ def derive_schedule_count(csv_files: list[tuple[str, str]]) -> FieldResult:
             state=FieldState.INVALID,
             notes=[f"Multiple CSV files supplied ({names}); cannot tell which is the vehicle schedule."],
             evidence=[Evidence(
-                source_file=f, locator="uploaded attachment inventory",
+                source_file=f, locator="attachment inventory",
                 excerpt_or_observation="One of several CSV files supplied; schedule count not derived.",
             ) for f, _ in csv_files],
         )

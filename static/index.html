@@ -240,6 +240,7 @@ body { font-variant-numeric: tabular-nums; }
 .edit .elab { flex-basis: 100%; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .edit .msg { flex-basis: 100%; color: var(--flag); font-size: 12.5px; }
 .edit .msg:empty { display: none; }
+.edit .hint { flex-basis: 100%; font-size: 12px; color: var(--muted); }
 .fbtns { display: flex; gap: 6px; align-items: flex-start; }
 .pending { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--ovr); }
 @media (max-width: 760px) { .field { grid-template-columns: 1fr; gap: 8px; } }
@@ -563,7 +564,7 @@ function fmtVal(v) {
 function evidenceList(evs) {
   if (!evs || !evs.length) return null;
   return el("div", { class: "ev" }, evs.map((e) => el("div", { class: "ev-i" },
-    el("span", { class: "loc" }, el("b", {}, e.source_file === "(packet)" ? "Whole packet" : e.source_file), " · " + e.locator),
+    el("span", { class: "loc" }, el("b", {}, e.source_file === "(packet)" ? "Checked" : e.source_file), " · " + e.locator),
     el("q", {}, e.excerpt_or_observation))));
 }
 
@@ -620,10 +621,13 @@ function editor(f) {
   const save = () => doOverride(f, { value: inp.value }, msg);
   inp.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { S.editing = null; render(); } });
   requestAnimationFrame(() => requestAnimationFrame(() => inp.focus({ preventScroll: true })));
+  const fromFile = { schedule_vehicle_count: "the vehicle schedule CSV", loss_runs_present: "the loss runs report" }[f.name];
   return el("div", { class: "edit" }, el("div", { class: "elab" }, "Reviewer correction"), inp,
     el("button", { class: "btn primary sm", onclick: save }, "Save"),
     el("button", { class: "btn sm", onclick: () => doOverride(f, { confirm_absent: true }, msg) }, "Confirm absent"),
-    el("button", { class: "btn sm", onclick: () => { S.editing = null; render(); } }, "Cancel"), msg);
+    el("button", { class: "btn sm", onclick: () => { S.editing = null; render(); } }, "Cancel"), msg,
+    fromFile ? el("div", { class: "hint" }, `Have ${fromFile}? Add it to the packet on the left and choose Process submission. `
+      + "The packet is processed again from scratch, so typed corrections are not kept.") : null);
 }
 function hint(name) {
   return ({ requested_effective_date: "YYYY-MM-DD", garaging_state: "e.g. CA or California", declared_vehicle_count: "Whole number",

@@ -76,7 +76,7 @@ def test_email_promise_only_flags():
     assert p.loss_runs.state == FieldState.KNOWN and p.loss_runs.value is False
     assert rule_r5(p.loss_runs).status.value == "FLAG"
     assert any("not an attachment" in e.excerpt_or_observation for e in p.loss_runs.evidence)
-    assert p.loss_runs.evidence[0].locator == "uploaded attachment inventory"
+    assert p.loss_runs.evidence[0].locator == "attachment inventory: application.pdf, broker_email.txt, vehicles.csv"
 
 
 def test_unreadable_pdf_unknown():
