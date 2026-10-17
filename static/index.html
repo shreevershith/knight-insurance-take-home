@@ -513,8 +513,7 @@ function actionItems() {
     : el("div", { class: "allclear" }, el("span", { class: "tick" }, "✓"), "Nothing missing, conflicting or flagged. All five checks pass.");
   return el("section", { id: "sec-actions" },
     el("div", { class: "sec-hd" }, el("h2", {}, "Action items"),
-      el("span", { class: "aside" }, issues.length ? `${issues.length} item(s) to resolve before review` : "Built by code from the rule results"),
-      issues.length ? el("div", { class: "right" }, el("span", { class: "req" }, "Reviewer action required")) : null),
+      issues.length ? el("span", { class: "aside" }, `${issues.length} item(s) to resolve before review`) : null),
     body);
 }
 function openField(name) {
@@ -546,7 +545,7 @@ function summarySection() {
 
 function rulesSection() {
   return el("section", { id: "sec-rules" },
-    el("div", { class: "sec-hd" }, el("h2", {}, "Rule checks"), el("span", { class: "aside" }, "R1–R5 · deterministic code, no model")),
+    el("div", { class: "sec-hd" }, el("h2", {}, "Rule checks")),
     S.evaluation.rules.map((r) => el("div", { class: "rule" },
       el("div", { class: "id" }, r.id),
       el("div", {}, el("div", { class: "nm" }, r.name), el("div", { class: "why" }, r.reason),
@@ -571,7 +570,6 @@ function evidenceList(evs) {
 function fieldsSection() {
   return el("section", { id: "sec-fields" },
     el("div", { class: "sec-hd" }, el("h2", {}, "Fields & evidence"),
-      el("span", { class: "aside" }, "Every value shows the source line it came from"),
       el("div", { class: "right" },
         S.pendingRerun ? el("span", { class: "pending" }, "Corrections pending") : null,
         el("button", { class: "btn primary sm", id: "rerunBtn", onclick: rerun, disabled: !S.pendingRerun }, "Rerun checks"))),
@@ -681,7 +679,7 @@ function documentsSection() {
     el("td", { class: "muted" }, a.pages != null ? a.pages + " page(s)" : a.rows != null ? a.rows + (a.detected_type === "vehicle_schedule" ? " data row(s)" : " line(s)") : "—"),
     el("td", { class: "muted small" }, a.note || "")));
   return el("section", { id: "sec-docs" },
-    el("div", { class: "sec-hd" }, el("h2", {}, "Documents received"), el("span", { class: "aside" }, "Type detected from each file's heading, not its name")),
+    el("div", { class: "sec-hd" }, el("h2", {}, "Documents received")),
     el("div", { class: "tbl" }, el("table", {},
       el("thead", {}, el("tr", {}, ["File", "Detected as", "Status", "Size", "Note"].map((h) => el("th", {}, h)))),
       el("tbody", {}, rows))));
