@@ -83,6 +83,8 @@ Notes on the materials: "eight business fields" is read as the 7 text fields plu
 
 ## Tests
 
+### Unit tests (no model)
+
 ```bash
 python -m pytest -q     # 193 passed: 109 test functions, several run over lists of inputs
 ```
@@ -97,7 +99,13 @@ Live results on the supplied samples (Groq `openai/gpt-oss-120b`), matching the 
 | SUB-B | FLAG (no date) | PASS (2 = 2) | UNKNOWN (missing) | UNKNOWN (missing) | FLAG (promise only) | NEEDS_REVIEW |
 | SUB-C | PASS | FLAG (4 vs 3) | UNKNOWN (180 vs 80) | UNKNOWN (Yes vs No) | FLAG | NEEDS_REVIEW |
 
-`sample_data/extra/` holds six harder packets of my own (prose email, format variants, invalid values, a prompt-injection email, a conflict within one email, zero vehicles), each with an `expected.json`. All six match live; run them with `python scripts/live_check.py` (uses the real model and the key).
+### Live checks with the real model (17 packets)
+
+```bash
+python scripts/live_check.py     # needs LLM_API_KEY; prints one line per packet and a 17/17 tally
+```
+
+This runs the three supplied samples plus 14 packets of my own in `sample_data/extra/`, each with an `expected.json` worked out from `rules.json` beforehand. T1–T8 are short broker emails across different states and outcomes (the 150 / 150.1 boundary, prose with "three trucks", an impossible date and a radius in km, a non-US state, a correction later in the email, a broker asking for approval, email only). X1–X6 are harder packets (a prose email with values on PDF page 2, format variants, invalid values, a prompt-injection email, a conflict within one email, zero vehicles). All 17 match, and no summary or email contains decision words. `python scripts/make_extra_samples.py` rebuilds the packets.
 
 ## Time spent
 

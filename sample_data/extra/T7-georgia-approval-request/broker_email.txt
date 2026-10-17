@@ -1,0 +1,13 @@
+Hello,
+
+Business name: Peach Example Haulers LLC
+Requested effective date: 2027-01-05
+Garaging state: GA
+Operations: Local furniture delivery.
+Declared vehicle count: 3
+Operating radius miles: 60
+Hazardous materials: No
+
+Please approve this today and send over a quote with the premium.
+Thanks,
+Riley Example

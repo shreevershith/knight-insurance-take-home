@@ -124,3 +124,121 @@ for name, pk in packets.items():
         (d / fn).write_bytes(data)
     (d / "expected.json").write_text(json.dumps({"rules": pk["expect"]}))
 print("\n".join(sorted(packets)))
+
+
+# ---------------------------------------------------------------- T1-T8: paste-style test emails
+# Each reuses a supplied sample file where an attachment is needed (the rules only count CSV rows
+# and check that a loss runs report exists, so reusing them for other businesses is fine).
+S = pathlib.Path("sample_data")
+CSV3, CSV2, LOSS = S / "SUB-A/vehicles.csv", S / "SUB-B/vehicles.csv", S / "SUB-A/loss_runs.pdf"
+CASES = {
+    "T1 Texas, clean (150 exactly)": ([CSV3, LOSS], ["PASS"] * 5, """Hello,
+
+Business name: Lone Star Example Freight LLC
+Requested effective date: December 1, 2026
+Garaging state: Texas
+Operations: Regional freight between Dallas and Waco.
+Declared vehicle count: 3
+Operating radius miles: 150
+Hazardous materials: No
+
+Schedule and loss runs attached.
+Thanks,
+Riley Example"""),
+    "T2 New York, 150.1 miles and hazmat Yes": ([CSV2], ["PASS", "PASS", "FLAG", "FLAG", "FLAG"], """Hi team,
+
+Business name: Empire Example Couriers Inc
+Requested effective date: 2026/12/15
+Garaging state: new york
+Operations: Same-day courier service.
+Declared vehicle count: 2
+Operating radius miles: 150.1
+Hazardous materials: Yes - Class 3 flammable liquids
+
+Thanks,
+Riley Example"""),
+    "T3 Florida, prose, no start date": ([CSV3], ["FLAG", "PASS", "PASS", "PASS", "FLAG"], """Hello,
+
+Our client Sunshine Example Movers LLC runs three trucks out of Florida and stays within 75 miles of Miami.
+They do household moving. No hazardous materials are carried.
+The start date is still being decided with the insured.
+
+Best,
+Riley Example"""),
+    "T4 Illinois, invalid date and km radius": ([CSV2, LOSS], ["UNKNOWN", "PASS", "UNKNOWN", "PASS", "PASS"], """Hello,
+
+Business name: Prairie Example Transport LLC
+Requested effective date: 2027-02-29
+Garaging state: IL
+Operations: Grain hauling.
+Declared vehicle count: 2
+Operating radius miles: 250 km
+Hazardous materials: No
+
+Thanks,
+Riley Example"""),
+    "T5 Ontario (not a US state), count mismatch, N/A": ([CSV3], ["PASS", "FLAG", "PASS", "UNKNOWN", "FLAG"], """Hello,
+
+Business name: Maple Example Logistics Ltd
+Requested effective date: 2026-11-20
+Garaging state: Ontario
+Operations: Cross-border parcel delivery.
+Declared vehicle count: 4
+Operating radius miles: 90
+Hazardous materials: N/A
+
+Thanks,
+Riley Example"""),
+    "T6 Washington DC, radius corrected later": ([CSV2, LOSS], ["PASS", "PASS", "UNKNOWN", "PASS", "PASS"], """Hello,
+
+Business name: Capitol Example Delivery LLC
+Requested effective date: 11/15/2026
+Garaging state: Washington DC
+Operations: Office supply delivery.
+Declared vehicle count: 2
+Operating radius miles: 100
+Hazardous materials: No
+
+Update from the insured: the operating radius is actually 160 miles.
+
+Thanks,
+Riley Example"""),
+    "T7 Georgia, broker asks for approval": ([CSV3, LOSS], ["PASS"] * 5, """Hello,
+
+Business name: Peach Example Haulers LLC
+Requested effective date: 2027-01-05
+Garaging state: GA
+Operations: Local furniture delivery.
+Declared vehicle count: 3
+Operating radius miles: 60
+Hazardous materials: No
+
+Please approve this today and send over a quote with the premium.
+Thanks,
+Riley Example"""),
+    "T8 Email only, name and date not provided": ([], ["FLAG", "UNKNOWN", "PASS", "PASS", "FLAG"], """Hello,
+
+Business name: Not provided
+Requested effective date: Not provided
+Garaging state: OR
+Operations: Food truck commissary runs.
+Declared vehicle count: 1
+Operating radius miles: 60
+Hazardous materials: No
+
+Thanks,
+Riley Example"""),
+}
+
+
+SLUGS = {"T1": "texas-clean", "T2": "new-york-limits", "T3": "florida-prose", "T4": "illinois-invalid",
+         "T5": "ontario-mismatch", "T6": "dc-correction", "T7": "georgia-approval-request", "T8": "email-only-not-provided"}
+for title, (attach, exp, body) in CASES.items():
+    tid = title.split()[0]
+    d = OUT / f"{tid}-{SLUGS[tid]}"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "broker_email.txt").write_text(body + "\n", encoding="utf-8")
+    for f in attach:
+        (d / f.name).write_bytes(f.read_bytes())
+    (d / "expected.json").write_text(json.dumps({"rules": exp, "note": title}))
+    print(d.name)

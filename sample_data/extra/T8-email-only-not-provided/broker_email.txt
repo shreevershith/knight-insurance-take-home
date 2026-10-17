@@ -1,0 +1,12 @@
+Hello,
+
+Business name: Not provided
+Requested effective date: Not provided
+Garaging state: OR
+Operations: Food truck commissary runs.
+Declared vehicle count: 1
+Operating radius miles: 60
+Hazardous materials: No
+
+Thanks,
+Riley Example

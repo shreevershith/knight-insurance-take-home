@@ -1,0 +1,12 @@
+Hello,
+
+Business name: Maple Example Logistics Ltd
+Requested effective date: 2026-11-20
+Garaging state: Ontario
+Operations: Cross-border parcel delivery.
+Declared vehicle count: 4
+Operating radius miles: 90
+Hazardous materials: N/A
+
+Thanks,
+Riley Example

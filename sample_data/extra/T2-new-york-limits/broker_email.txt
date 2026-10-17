@@ -1,0 +1,12 @@
+Hi team,
+
+Business name: Empire Example Couriers Inc
+Requested effective date: 2026/12/15
+Garaging state: new york
+Operations: Same-day courier service.
+Declared vehicle count: 2
+Operating radius miles: 150.1
+Hazardous materials: Yes - Class 3 flammable liquids
+
+Thanks,
+Riley Example

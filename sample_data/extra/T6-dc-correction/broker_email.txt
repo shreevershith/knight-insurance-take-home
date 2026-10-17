@@ -1,0 +1,14 @@
+Hello,
+
+Business name: Capitol Example Delivery LLC
+Requested effective date: 11/15/2026
+Garaging state: Washington DC
+Operations: Office supply delivery.
+Declared vehicle count: 2
+Operating radius miles: 100
+Hazardous materials: No
+
+Update from the insured: the operating radius is actually 160 miles.
+
+Thanks,
+Riley Example
