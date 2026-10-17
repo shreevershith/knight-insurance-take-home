@@ -1,0 +1,4 @@
+# Keep supplied files byte-for-byte (no line-ending conversion)
+*.pdf binary
+candidate_materials/** -text
+sample_data/** -text
