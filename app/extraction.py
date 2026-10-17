@@ -44,16 +44,16 @@ Fields:
 For EVERY field return a list of mentions found in the document (an empty list if the field is not mentioned).
 Each mention is an object:
   "raw_value": the shortest exact span of the document that states the value, copied EXACTLY (do not reformat, convert,
-               abbreviate or expand it). Examples: "No" from "No hazardous materials are transported", "120-mile" from
-               "run within a 120-mile radius", "November 15, 2026" from "coverage to start on November 15, 2026",
-               "hauling building supplies" from "trucks ... hauling building supplies",
+               abbreviate or expand it). Generic examples: "no" from "hazardous cargo: no, never", "65-mile" from
+               "stays inside a 65-mile area", "March 3, 2027" from "the policy should begin March 3, 2027",
+               "frozen food distribution" from "the firm handles frozen food distribution",
   "excerpt": the complete line of the document that contains the value, copied exactly,
   "explicitly_not_provided": true only if the document explicitly says the value is not provided / not stated
                              (then raw_value must be null and excerpt is that line).
 Rules:
 - Only report what the document states. Never infer, guess, calculate or fill in a value.
 - If the same field is stated more than once, even with different values, return EACH mention separately.
-  This includes corrections, updates and restatements anywhere in the text (e.g. "Correction: the fleet is 7 vehicles"),
+  This includes corrections, updates and restatements anywhere in the text (e.g. "Revised: 12 units, not 10"),
   and values stated in prose sentences, not only in "Label: value" lines. Never choose between them.
 - Ignore page markers like [PAGE 1]; they are not document content.
 - Respond with a single JSON object and nothing else, in this exact shape:
