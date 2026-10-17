@@ -96,7 +96,7 @@ Every model call uses temperature 0 and JSON mode, has a timeout, and is retried
    - **Rerun checks** recomputes the rules deterministically with no model call. The summary and draft are then marked **stale**, with a **Regenerate** button.
 
 8. **The page.** A single static page with no build step. Top to bottom:
-   - Overall status, with PASS / FLAG / UNKNOWN counts and the disclaimer.
+   - Overall status, with PASS / FLAG / UNKNOWN counts (each naming its rules, e.g. "R2 vehicle count, R5 loss runs") and the disclaimer.
    - **Action items**: the code-built issue list. Each item has a **Review** button that jumps to the field with the correction box open.
    - The AI summary, the rule checks, and the fields with their evidence. Conflicting values appear side by side.
    - The documents received, and the editable draft email.
@@ -206,7 +206,8 @@ No test calls a live model. `tests/fake_llm.py` is a test-only stand-in injected
 
 ## AI coding tools used
 
-- **Claude Code** (Anthropic, desktop app) was the only AI coding tool used. It drafted the code, tests and README from my written specification, phase by phase, and ran the tests and live checks. I reviewed each phase and made the design decisions.
+- **Claude Code** (Anthropic, desktop app) drafted the code, tests and README from my written specification, phase by phase, and ran the tests and live checks. I reviewed each phase and made the design decisions.
+- **Google Stitch** produced a visual mockup of the review page. Only its visual ideas were adopted: explained status counts, a framed action list, source-labelled conflict cards, rule IDs in the status tags, boxed summary groups, and the parchment palette with near-square corners. Claude Code rebuilt them in the existing page's CSS and markup. No Stitch code was used; the mockup was a static page with invented rules and wording, which were discarded.
 - The runtime LLM is Groq `openai/gpt-oss-120b`, as described above.
 
 ## Time spent
