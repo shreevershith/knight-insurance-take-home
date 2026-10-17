@@ -199,12 +199,12 @@ No test calls a live model. `tests/fake_llm.py` is a test-only stand-in injected
 
 ## AI coding tools used
 
-- **Claude Code** (Anthropic, desktop app). It drafted the code, tests and README from my written specification, phase by phase, with my review and decisions at each step. *[Candidate: confirm or edit this line.]*
+- **Claude Code** (Anthropic, desktop app) was the only AI coding tool used. It drafted the code, tests and README from my written specification, phase by phase, and ran the tests and live checks. I reviewed each phase and made the design decisions.
 - The runtime LLM is Groq `openai/gpt-oss-120b`, as described above.
 
 ## Time spent
 
-*[Candidate: fill in, e.g. "about N hours on Saturday, October 17, 2026".]*
+About 2 hours 10 minutes of build time on Saturday, October 17, 2026 (first commit to final code commit), not counting time spent reading the materials and recording the demo video.
 
 ---
 
