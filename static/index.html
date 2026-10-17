@@ -102,7 +102,9 @@ body { font-variant-numeric: tabular-nums; }
 .hero-empty p { font-size: 16px; color: var(--ink-2); margin: 16px 0 0; max-width: 540px; }
 .steps { list-style: none; padding: 0; margin: 36px 0 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--line); }
 .steps li { padding: 16px 16px 0 0; font-size: 13px; color: var(--ink-2); }
-.steps li b { display: block; font: 500 12px/1 var(--mono); color: var(--faint); margin-bottom: 8px; }
+.steps .no { display: block; font: 500 12px/1 var(--mono); color: var(--faint); margin-bottom: 8px; }
+.steps .st-t { display: block; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+.steps .st-d { display: block; }
 @media (max-width: 700px) { .steps { grid-template-columns: 1fr 1fr; } .hero-empty h1 { font-size: 34px; } }
 .processing { padding: 56px 0; display: flex; gap: 16px; align-items: flex-start; }
 .pipe { list-style: none; margin: 22px 0 0; padding: 0; border: 1px solid var(--line); background: var(--surface); max-width: 620px; position: relative; overflow: hidden; }
@@ -440,15 +442,18 @@ function render() {
 }
 
 function emptyState() {
+  const step = (n, title, text) => el("li", {}, el("span", { class: "no" }, n),
+    el("span", { class: "st-t" }, title), el("span", { class: "st-d" }, text));
   return el("div", { class: "hero-empty" },
-    el("div", { class: "eyebrow" }, "Underwriter submission review"),
-    el("h1", { style: "margin-top:12px" }, "Know what is missing before you read a single page."),
-    el("p", {}, "Drop one broker packet on the left. Every extracted value comes with the line it was found on, the five checks run in plain code, and a draft follow-up is ready to copy."),
-    el("ol", { class: "steps" },
-      el("li", {}, el("b", {}, "01"), "Model extracts fields; code verifies each excerpt in the source"),
-      el("li", {}, el("b", {}, "02"), "R1–R5 evaluated deterministically"),
-      el("li", {}, el("b", {}, "03"), "Correct values and rerun the checks"),
-      el("li", {}, el("b", {}, "04"), "Copy the draft broker email — never sent")));
+    el("div", { class: "eyebrow" }, "No submission loaded"),
+    el("h1", { style: "margin-top:12px" }, "Review one broker submission"),
+    el("p", {}, "Add the broker email, application, vehicle schedule and any loss runs on the left, then choose ",
+      el("b", {}, "Process submission"), "."),
+    el("ul", { class: "steps" },
+      step("01", "Upload", "Add one packet's files, or paste the email."),
+      step("02", "Check", "Each value is shown with the line it came from, and the five checks run on the results."),
+      step("03", "Resolve", "Correct any value and rerun the checks."),
+      step("04", "Follow up", "Copy the draft email to the broker. Nothing is sent.")));
 }
 
 function subnav() {
