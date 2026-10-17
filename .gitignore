@@ -6,3 +6,6 @@ __pycache__/
 .pytest_cache/
 pytest-cache-files-*/
 .claude/
+
+# personal prep notes (submission draft, demo script, study guide)
+private/

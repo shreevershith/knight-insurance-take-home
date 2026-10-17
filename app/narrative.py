@@ -15,6 +15,7 @@ from typing import Any, Mapping, Optional
 from pydantic import BaseModel, ConfigDict
 
 from .llm import LLMClient, LLMError
+from .rules import RADIUS_THRESHOLD_MILES
 from .models import (ALL_FIELDS, DISCLAIMER, FIELD_LABELS, FieldResult, FieldState, Issue,
                      IssueGroup, Narrative, OverallStatus, RuleResult, RuleStatus)
 
@@ -145,7 +146,7 @@ def build_issues(fields: Mapping[str, FieldResult], rules: list[RuleResult]) -> 
         issues[-1].rule_ids = ["R2"]
     if r3 and r3.status == RuleStatus.FLAG:
         v = fields["operating_radius_miles"].effective_value
-        add("Flagged", "operating_radius_miles", f"Operating radius: {v} miles is greater than 150 miles.",
+        add("Flagged", "operating_radius_miles", f"Operating radius: {v} miles is greater than {RADIUS_THRESHOLD_MILES} miles.",
             f"Please confirm the operating radius, stated as {v} miles.", values=[v])
     if r4 and r4.status == RuleStatus.FLAG:
         add("Flagged", "hazardous_materials", "Hazardous materials: answered Yes.",
