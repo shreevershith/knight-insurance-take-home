@@ -223,7 +223,8 @@ def _sub_c_inputs():
 def _good_output(issues):
     lines = [f"{i.label}: {i.text}" for i in issues]
     return NarrativeOutput(snapshot="Metro Route Example LLC, garaged in CA.", issue_lines=lines,
-                           email_subject="Request", email_body="\n".join(lines))
+                           email_subject="Request",
+                           email_body="Hello,\n\n" + "\n".join(f"{n}. {l}" for n, l in enumerate(lines, 1)))
 
 
 def test_validator_accepts_good_output():
@@ -358,6 +359,13 @@ def test_long_free_text_conflict_values_need_not_be_quoted():
     issue = next(i for i in ev.issues if i.field == "operations_description")
     out = NarrativeOutput(snapshot="Acme LLC requests a 2026-11-01 start.",
                           issue_lines=["The operations description differs between the two documents provided."],
-                          email_subject="Request", email_body="Please confirm the operations description, which differs "
-                          "between the application and your email. Thank you, Underwriting team")
+                          email_subject="Request", email_body="Hello,\n\n1. Please confirm the operations description, which differs "
+                          "between the application and your email.\n\nThank you,\nUnderwriting team")
     assert validate_narrative(out, [issue], fields, ev.overall_status) == []
+
+
+def test_validator_requires_one_request_per_line():
+    fields, rules, overall, issues = _sub_c_inputs()
+    out = _good_output(issues)
+    out.email_body = "Hello, " + " ".join(f"Please confirm: {i.text}" for i in issues)  # all on one line
+    assert any("own numbered line" in e for e in validate_narrative(out, issues, fields, overall))

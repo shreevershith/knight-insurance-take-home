@@ -70,7 +70,7 @@ The brief requires the video to show: **upload → extraction with evidence → 
 - Say: *"The app never presents template text as model output."* Restart normally afterwards.
 
 ### 7:15–8:00 · Tests and wrap-up
-- In a terminal: `python -m pytest -q`, which shows **176 passed** with no API key and no network. Mention the fake LLM, which parses whatever text it is given rather than returning stored answers.
+- In a terminal: `python -m pytest -q`, which shows **177 passed** with no API key and no network. Mention the fake LLM, which parses whatever text it is given rather than returning stored answers.
 - Briefly list the limitations from the README:
   - Evidence matching is line-based.
   - Ollama hasn't been run.

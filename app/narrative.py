@@ -198,7 +198,9 @@ Write:
 3. "email_subject" and "email_body": a polite, concise draft email to the broker. For each item in "issues",
    write one complete sentence asking for it: missing values -> ask for the value; conflicting values -> quote
    both values and ask which is correct; flagged items -> ask the broker to confirm or supply it (for a missing
-   loss runs report, ask them to send it). Ask for nothing else. Sign off as "Underwriting team".
+   loss runs report, ask them to send it). Ask for nothing else. Format the body as: a greeting line, one short
+   intro sentence, then the requests as a numbered list with EACH request on its own line ("1. ...", "2. ..."),
+   then the sign-off "Thank you," and "Underwriting team" on two lines. Separate lines with \\n in the JSON string.
    If "issues" is empty, return empty strings for both.
 
 Strictly forbidden, in every text: any decision or opinion (approval, decline, acceptance, rejection,
@@ -246,6 +248,7 @@ def _mask(text: str, fields: Mapping[str, FieldResult]) -> str:
     return text
 
 
+_LIST_LINE = re.compile(r"^\s*(?:\d+[.)]|[-•*])\s+\S", re.M)  # one request per line
 MAX_QUOTED_VALUE = 30  # longer free-text values (e.g. operations) need only the field named
 
 
@@ -278,6 +281,8 @@ def validate_narrative(out: NarrativeOutput, issues: list[Issue], fields: Mappin
             errors.append("email subject/body is empty")
         elif len(re.findall(r"\w+", out.email_body)) < MIN_LINE_WORDS * (len(issues) + 1):
             errors.append("email body is too short to ask for every item in full sentences")
+        elif len(_LIST_LINE.findall(out.email_body)) < len(issues):
+            errors.append(f"email body must list each of the {len(issues)} requests on its own numbered line")
         for issue in issues:
             if not _mentions_field(issue, out.email_body):
                 errors.append(f"email body does not ask about '{issue.label}'")
