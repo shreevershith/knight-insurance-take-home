@@ -95,6 +95,13 @@ Every model call uses temperature 0 and JSON mode, has a timeout, and is retried
    - The effective value is labelled **HUMAN OVERRIDE**. The original value, state, alternatives and evidence stay visible, and the override can be reverted.
    - **Rerun checks** recomputes the rules deterministically with no model call. The summary and draft are then marked **stale**, with a **Regenerate** button.
 
+8. **The page.** A single static page with no build step. Top to bottom:
+   - Overall status, with PASS / FLAG / UNKNOWN counts and the disclaimer.
+   - **Action items**: the code-built issue list. Each item has a **Review** button that jumps to the field with the correction box open.
+   - The AI summary, the rule checks, and the fields with their evidence. Conflicting values appear side by side.
+   - The documents received, and the editable draft email.
+   - A sticky section nav. On narrow screens the packet panel collapses after processing, so the result appears first.
+
 ### Results on the supplied samples (live, Groq `openai/gpt-oss-120b`)
 
 | Sample | R1 | R2 | R3 | R4 | R5 | Overall |
