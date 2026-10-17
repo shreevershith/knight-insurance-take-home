@@ -80,3 +80,29 @@ def test_bool_leading_explicit_answer(raw, expected):
 @pytest.mark.parametrize("raw", ["Yes, occasionally", "No, except fuel", "Not provided", "None", "N/A", "Nope maybe"])
 def test_bool_hedged_or_unclear_stays_invalid(raw):
     assert not normalize_bool(raw).valid
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("2026/11/01", "2026-11-01"), ("2026.11.01", "2026-11-01"), ("11-01-2026", "2026-11-01"), ("11/01/2026", "2026-11-01"),
+])
+def test_date_separators(raw, expected):
+    assert normalize_date(raw).value == expected
+
+
+@pytest.mark.parametrize("raw", ["2026/11-01", "2026/02/30", "13-01-2026"])
+def test_date_mixed_or_impossible_still_invalid(raw):
+    assert not normalize_date(raw).valid
+
+
+@pytest.mark.parametrize("raw", ["DC", "D.C.", "Washington DC", "Washington D.C.", "District of Columbia"])
+def test_state_dc_aliases(raw):
+    assert normalize_state(raw).value == "DC"
+
+
+@pytest.mark.parametrize("raw,expected", [("three trucks", 3), ("Twelve", 12), ("zero vehicles", 0)])
+def test_count_number_words(raw, expected):
+    assert normalize_count(raw).value == expected
+
+
+def test_count_word_beyond_twenty_is_invalid():
+    assert not normalize_count("thirty vans").valid

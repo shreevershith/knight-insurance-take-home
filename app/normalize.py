@@ -72,8 +72,8 @@ def normalize_operations(raw: Any) -> NormResult:
 
 
 # ---------------------------------------------------------------- dates
-_ISO = re.compile(r"^(\d{4})-(\d{1,2})-(\d{1,2})$")
-_US = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
+_ISO = re.compile(r"^(\d{4})([-/.])(\d{1,2})\2(\d{1,2})$")
+_US = re.compile(r"^(\d{1,2})([-/.])(\d{1,2})\2(\d{4})$")
 _MONTHS = ("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
 
 
@@ -84,7 +84,7 @@ def normalize_date(raw: Any) -> NormResult:
     for pattern, order in ((_ISO, "ymd"), (_US, "mdy")):
         m = pattern.match(s)
         if m:
-            parts = dict(zip(order, map(int, m.groups())))
+            parts = dict(zip(order, map(int, (m.group(1), m.group(3), m.group(4)))))  # group 2 = separator
             try:
                 d = date(parts["y"], parts["m"], parts["d"])
             except ValueError:
@@ -118,6 +118,7 @@ US_STATES = {
     "rhode island": "RI", "south carolina": "SC", "south dakota": "SD", "tennessee": "TN",
     "texas": "TX", "utah": "UT", "vermont": "VT", "virginia": "VA", "washington": "WA",
     "west virginia": "WV", "wisconsin": "WI", "wyoming": "WY", "district of columbia": "DC",
+    "washington dc": "DC", "washington d c": "DC", "dc": "DC",
 }
 _CODES = set(US_STATES.values())
 
@@ -148,10 +149,18 @@ def _to_number(s: str) -> float:
     return float(s.replace(",", ""))
 
 
+_NUMBER_WORDS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen "
+    "seventeen eighteen nineteen twenty".split())}
+
+
 def normalize_count(raw: Any) -> NormResult:
     s = _clean(raw)
     if not s:
         return _bad("empty value")
+    first, _, rest = s.partition(" ")
+    if first.lower() in _NUMBER_WORDS:  # "three trucks" -> "3 trucks"
+        s = f"{_NUMBER_WORDS[first.lower()]} {rest}".strip()
     m = _COUNT_RE.match(s)
     if not m:
         return _bad(f"'{s}' is not a whole number of vehicles")
