@@ -8,3 +8,5 @@ pdfplumber==0.11.4
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 pytest==8.3.4
+# transitive, pinned: newer anyio deprecates an alias the pinned starlette test client uses
+anyio==4.8.0
