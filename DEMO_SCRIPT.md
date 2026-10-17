@@ -17,7 +17,7 @@ The brief requires the video to show: **upload → extraction with evidence → 
 
 ### 0:45–2:45 · Upload and extraction with evidence (SUB-C, the richest sample)
 1. Drag the four files from `sample_data/SUB-C/` into the drop zone. Point out that the type comes from the content heading, not the filename. Click **Process submission** and point at the processing state.
-2. **Status header:** "Needs review" for Metro Route Example LLC, 1 PASS · 2 FLAG · 2 UNKNOWN, the disclaimer, and the per-call status line (each extraction call ok, summary from the model, model name).
+2. **Status header:** "Needs review" for Metro Route Example LLC, 1 PASS · 2 FLAG · 2 UNKNOWN, each naming its rules, and the disclaimer. The model in use is shown in the top bar.
 3. **Action items** (the badge in the section nav shows 4): the code-built list of what to resolve. Each item is grouped as Conflicting or Flagged, shows its values and sources, and says which rule it affects. Say: *"This is what an underwriter acts on first."*
 4. Click **Review** on the radius item. It jumps to the field with the correction box open. Then scroll through **Fields & evidence**:
    - *Business name*: two evidence items, `application.pdf · PDF page 1` and `broker_email.txt · email body, line 8`, each showing the real source line.

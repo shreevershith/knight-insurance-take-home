@@ -116,8 +116,6 @@ body { font-variant-numeric: tabular-nums; }
 .pipe .who { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); align-self: center; }
 .pipe .who.llm { color: var(--ovr); }
 .elapsed { font: 500 12px/1 var(--mono); color: var(--muted); margin-top: 10px; }
-.pipeline-sum { grid-column: 1 / -1; font-size: 11.5px; color: var(--faint); }
-.pipeline-sum b { color: var(--muted); font-weight: 600; }
 .spinner { width: 20px; height: 20px; border: 2px solid var(--line-2); border-top-color: var(--ink); border-radius: 50%; animation: spin .8s linear infinite; flex: none; margin-top: 4px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .processing h2 { font-family: var(--serif); font-weight: 500; font-size: 26px; }
@@ -148,9 +146,7 @@ body { font-variant-numeric: tabular-nums; }
 .stat .l { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-top: 6px; }
 .stat.p .n, .stat.p .l { color: var(--pass); } .stat.f .n, .stat.f .l { color: var(--flag); } .stat.u .n, .stat.u .l { color: var(--unk); }
 .stat.zero .n, .stat.zero .l { color: var(--faint); }
-.disc { grid-column: 1 / -1; font-size: 11.5px; color: var(--faint); margin-top: -6px; }
-.calls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 11.5px; color: var(--faint); padding-top: 10px; border-top: 1px solid var(--line); }
-.calls span { display: inline-flex; align-items: center; gap: 6px; }
+.disc { grid-column: 1 / -1; font-size: 11px; color: var(--faint); margin-top: -8px; }
 @media (max-width: 760px) { .status { grid-template-columns: 1fr; } .status h1 { font-size: 36px; } .stats { border-left: 0; } .stat:first-child { padding-left: 0; } }
 
 .alert { border-radius: var(--r); padding: 14px 16px; border: 1px solid; font-size: 13.5px; }
@@ -301,7 +297,6 @@ tr:last-child td { border-bottom: 0; }
       <button class="btn primary" id="processBtn">Process submission</button>
       <button class="btn" id="newBtn" title="Clear everything">New</button>
     </div>
-    <p class="note collapsible">Processed in memory, nothing is stored. Document text is sent to the configured model for extraction; the summary step receives only structured results.</p>
   </aside>
 
   <main class="results" id="results" aria-live="polite"></main>
@@ -376,7 +371,7 @@ input.addEventListener("change", () => { addFiles(input.files); input.value = ""
 drop.addEventListener("drop", (e) => addFiles(e.dataTransfer.files));
 
 function resetResults() {
-  Object.assign(S, { result: null, fields: null, evaluation: null, narrative: null, elapsed: null,
+  Object.assign(S, { result: null, fields: null, evaluation: null, narrative: null,
                      narrativeStale: false, pendingRerun: false, editing: null });
   S.req++;  // any in-flight response for the old packet is ignored
 }
@@ -415,7 +410,6 @@ async function processPacket() {
   try {
     const r = await api("/api/process", { method: "POST", body: fd });
     if (my !== S.req) return;
-    S.elapsed = (performance.now() - t0) / 1000;
     S.result = r; S.fields = r.fields; S.narrative = r.narrative;
     S.evaluation = { rules: r.rules, overall_status: r.overall_status, rule_counts: r.rule_counts, issues: r.issues, disclaimer: r.disclaimer };
     render(); toResults();
@@ -470,7 +464,7 @@ function jump(id) {
 }
 
 function statusHero() {
-  const ev = S.evaluation, r = S.result;
+  const ev = S.evaluation;
   const ready = ev.overall_status === "READY_FOR_REVIEW";
   const name = S.fields.business_name;
   const who = name && name.resolved ? name.effective_display : "Applicant name not confirmed";
@@ -478,7 +472,6 @@ function statusHero() {
   const cell = (n, title, word, st, cls) => el("div", { class: "cell " + cls + (n === 0 ? " zero" : "") },
     el("div", { class: "lbl2" }, title), el("div", { class: "num" }, el("b", {}, n), el("span", {}, word)),
     el("div", { class: "ex" }, which(st)));
-  const n = S.narrative;
   return el("section", { class: "status " + (ready ? "ready" : "needs"), "aria-label": "Overall status" },
     el("div", { class: "status-top" },
       el("div", {},
@@ -490,28 +483,7 @@ function statusHero() {
       cell(ev.rule_counts.PASS, "Rules passed", "Pass", "PASS", "p"),
       cell(ev.rule_counts.FLAG, "Rules flagged", "Flag", "FLAG", "f"),
       cell(ev.rule_counts.UNKNOWN, "Rules unresolved", "Unknown", "UNKNOWN", "u")),
-    el("div", { class: "disc" }, ev.disclaimer),
-    pipelineSummary(),
-    el("div", { class: "calls" },
-      r.extraction.map((x) => el("span", {}, el("span", { class: "dot " + (x.status === "ok" ? "ok" : "bad") }),
-        `Extraction · ${x.source_file}: ${x.status === "ok" ? "ok" : "failed (" + x.error_kind + ")"}`)),
-      el("span", {}, el("span", { class: "dot " + (n.source === "model" ? "ok" : "warn") }),
-        "Summary & draft: " + (n.source === "model" ? "model" : "template")),
-      el("span", {}, `${r.model.provider || "no model"} · ${r.model.model || "—"}`)));
-}
-
-function pipelineSummary() {
-  const r = S.result, ok = r.extraction.filter((x) => x.status === "ok");
-  const kept = r.extraction.reduce((a, x) => a + x.mentions_kept, 0), dropped = r.extraction.reduce((a, x) => a + x.mentions_discarded, 0);
-  const parts = [
-    `${r.inventory.length} file(s) read`,
-    `${ok.length}/${r.extraction.length} model extraction(s) ok`,
-    `${kept} mention(s) verified` + (dropped ? `, ${dropped} discarded` : ""),
-    "R1–R5 evaluated",
-    "summary: " + (S.narrative.source === "model" ? "model" : "template"),
-  ];
-  if (S.elapsed) parts.push(S.elapsed.toFixed(1) + " s");
-  return el("div", { class: "pipeline-sum" }, el("b", {}, "Pipeline "), parts.join(" · "));
+    el("div", { class: "disc" }, ev.disclaimer));
 }
 
 function failures() {
@@ -564,7 +536,6 @@ function summarySection() {
   for (const g of n.issue_groups) grps.append(el("div", { class: "grp gb-" + g.group }, el("h3", {}, g.group), el("ul", {}, g.lines.map((l) => el("li", {}, l)))));
   if (n.overrides.length) grps.append(el("div", { class: "grp gb-Overrides" }, el("h3", {}, "Overrides applied"), el("ul", {}, n.overrides.map((l) => el("li", {}, l)))));
   if (grps.childElementCount) body.append(grps);
-  body.append(el("div", { class: "fine" }, n.disclaimer));
   return el("section", { id: "sec-summary" },
     el("div", { class: "sec-hd" }, el("h2", {}, "Underwriter summary"),
       isModel ? pill("AI-generated", "tag-ai", true) : pill("Template · not AI-generated", "tag-tpl", true),

@@ -126,7 +126,9 @@ class OpenAICompatibleClient:
             raise LLMError("connection", f"Could not connect to {self.config.base_url}.")
         except openai.APIStatusError as exc:
             kind = "server" if exc.status_code >= 500 else "other"
-            detail = (getattr(exc, "message", "") or "")[:200]
+            body = getattr(exc, "body", None)
+            err = body.get("error", body) if isinstance(body, dict) else None
+            detail = ((err.get("message") if isinstance(err, dict) else None) or getattr(exc, "message", "") or "")[:200]
             raise LLMError(kind, f"Provider returned HTTP {exc.status_code}" + (f": {detail}" if detail else "."))
         content = (resp.choices[0].message.content or "") if resp.choices else ""
         if not content.strip():
