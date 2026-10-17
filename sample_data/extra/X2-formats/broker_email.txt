@@ -1,0 +1,15 @@
+From: Jordan Example <broker@example.com>
+To: Underwriting Exercise <underwriting@example.com>
+Subject: Submission - Harbor Line
+
+Business name: HARBOR LINE EXAMPLE CO
+Requested effective date: Nov 1, 2026
+Garaging state: california
+Operations: Container drayage.
+Declared vehicle count: 3 vehicles
+Operating radius miles: 150.0 miles
+Hazardous materials: N
+
+Thanks,
+Jordan Example
+Fictional Broker

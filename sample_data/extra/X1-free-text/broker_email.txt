@@ -1,0 +1,14 @@
+From: Jordan Example <broker@example.com>
+To: Underwriting Exercise <underwriting@example.com>
+Subject: New business - Blue Ridge Haulers
+
+Hi team,
+
+We're writing on behalf of Blue Ridge Haulers Example Inc., who would like coverage to start on November 15, 2026.
+Their 5 trucks are garaged in Texas and run within a 120-mile radius hauling building supplies.
+No hazardous materials are transported.
+Application, schedule and loss history are attached.
+
+Thanks,
+Jordan Example
+Fictional Broker

@@ -65,3 +65,18 @@ def test_bool_ambiguous(raw):
 
 def test_text_key_ignores_case_space_trailing_period():
     assert text_key("Local delivery of  packaged goods.") == text_key("local delivery of packaged goods")
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("No hazardous materials are transported", False),
+    ("Yes - paint and solvents", True),
+    ("No.", False),
+])
+def test_bool_leading_explicit_answer(raw, expected):
+    n = normalize_bool(raw)
+    assert n.valid and n.value is expected
+
+
+@pytest.mark.parametrize("raw", ["Yes, occasionally", "No, except fuel", "Not provided", "None", "N/A", "Nope maybe"])
+def test_bool_hedged_or_unclear_stays_invalid(raw):
+    assert not normalize_bool(raw).valid

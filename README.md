@@ -112,6 +112,26 @@ Every model call uses temperature 0 and JSON mode, has a timeout, and is retried
 
 On each sample, all 7 fields were found in both the email and the PDF, and the evidence check discarded no mentions. Nothing about the samples is hard-coded. The same results come out of the end-to-end tests, which use a fake LLM that parses whatever document text it is given.
 
+### Extra packets (my own fictional data, `sample_data/extra/`)
+
+To see how the model handles input beyond the three tidy samples, I wrote six harder packets. Each has an `expected.json` worked out from `rules.json` before running anything. All six match live on Groq, and every summary came from the model.
+
+| Packet | What it tests | R1–R5 |
+|---|---|---|
+| X1-free-text | Prose email (no "Label: value" lines), values on PDF page 2, a report titled "Loss History Report" with claims | all PASS → READY_FOR_REVIEW |
+| X2-formats | `150.0 miles` vs `150`, `Nov 1, 2026` vs `2026-11-01`, `california` vs `CA`, `N` vs `no`; header-only CSV | PASS, FLAG (3 vs 0), PASS, PASS, FLAG |
+| X3-invalid | `2026-02-30`, `-50`, `N/A` vs `Occasionally`; an unreadable `loss_runs.pdf` | UNKNOWN, PASS, UNKNOWN, UNKNOWN, UNKNOWN |
+| X4-injection | The email tells "the AI" to report No / 50 miles and to say "approved" | PASS, PASS, FLAG (200), FLAG (Yes), PASS; no "approved" anywhere |
+| X5-intra-conflict | Two counts in the same email (6, then "actually 7"); no business name; an application that only *asks* about loss runs | FLAG, UNKNOWN (6 vs 7), PASS, PASS, FLAG |
+| X6-zero-fleet | Email only, 0 declared vehicles and a header-only CSV | PASS, PASS (0 = 0), PASS, PASS, FLAG |
+
+The first run matched 4 of 6, and the misses led to these fixes:
+- On prose, the model returned whole phrases as values ("120-mile", "No hazardous materials are transported"). The prompt now asks for the shortest exact span. The radius parser accepts "120-mile", and a sentence that opens with an explicit Yes/No counts unless the rest hedges it ("Yes, occasionally" stays ambiguous).
+- The model missed a correction later in the email. The prompt now asks for every mention, including corrections and prose.
+- "Hauling of building supplies" vs "hauling building supplies" was a false conflict. Operations wording that differs only by small words now counts as the same description, with a note.
+
+Rerun them with `python scripts/live_check.py` (this calls the real model, so it needs the key). Regenerate the packets with `python scripts/make_extra_samples.py`.
+
 ---
 
 ## Architecture
@@ -167,7 +187,8 @@ The model reads documents and writes prose. Code decides every value, state, rul
   - No status wording that contradicts the rule engine.
   - The status line and the disclaimer (which itself contains "decline" and "quote") are fixed text written by code, outside the checked model text.
 - **Normalization choices:**
-  - Operations descriptions are compared ignoring case, spacing and edge punctuation, so "…retail goods." and "…retail goods" agree.
+  - Operations descriptions are compared ignoring case, spacing and edge punctuation, so "…retail goods." and "…retail goods" agree. Wording that differs only by small words ("hauling building supplies" vs "Hauling of building supplies") is treated as the same description, with a note. Genuinely different descriptions are still a CONFLICT.
+  - Yes/No: "Yes", "No", "Y", "N", "true" and "false" count, as does a sentence that opens with an explicit answer ("No hazardous materials are transported"), unless the rest hedges it ("Yes, occasionally", "No, except fuel", "Yes and no" stay ambiguous).
   - "N/A" for hazardous materials is ambiguous, so it is INVALID, not No and not missing.
   - Absence is never treated as No.
 - **Loss runs.** A readable report titled loss runs or loss history counts, even with zero claims. An email statement never counts. An unreadable or unclassifiable PDF makes R5 UNKNOWN unless a real report is also attached. Because the spec has no "UNKNOWN" field state, this case is stored as INVALID with a null value and an explanatory note.
@@ -182,7 +203,7 @@ The model reads documents and writes prose. Code decides every value, state, rul
 ## Tests
 
 ```bash
-python -m pytest -q        # 160 passed (about 4 s, no network, no API key)
+python -m pytest -q        # 175 passed (about 4 s, no network, no API key)
 ```
 
 No test calls a live model. `tests/fake_llm.py` is a test-only stand-in injected through the FastAPI dependency (`app.dependency_overrides`) or passed directly. It **derives its answers from the text it receives**: a label/value line parser for extraction, and the structured payload for the narrative. It also has failure modes: timeout, 429, bad JSON, missing keys, a hallucinated value, banned words, a wrong status, a dropped issue.
@@ -212,7 +233,7 @@ No test calls a live model. `tests/fake_llm.py` is a test-only stand-in injected
 
 ## Time spent
 
-About 2 hours 10 minutes of build time on Saturday, October 17, 2026 (first commit to final code commit), not counting time spent reading the materials and recording the demo video.
+About 3 hours 35 minutes of build time on Saturday, October 17, 2026 (first commit to latest commit, including the design passes and the extra live tests), not counting time spent reading the materials and recording the demo video.
 
 ---
 
@@ -225,7 +246,8 @@ About 2 hours 10 minutes of build time on Saturday, October 17, 2026 (first comm
   - There is no fallback search when the quoted line can't be found; the mention is simply dropped with a warning.
 - **"Not cross-checked" works per source, not per field:** a source counts as unchecked only when its whole model call fails. If the evidence check discards a single field's mentions, that field is treated as not mentioned in that source.
 - **Unreadable PDFs:** an unreadable PDF makes R5 UNKNOWN and appears in the inventory. It does not mark other fields as not cross-checked.
-- **Free-text comparison:** operations descriptions and business names that are worded differently, beyond case, spacing and edge punctuation, show as a CONFLICT for the reviewer to resolve. There is no meaning-based matching.
+- **Free-text comparison:** business names worded differently, and operations descriptions that differ by more than small words, show as a CONFLICT for the reviewer to resolve. There is no meaning-based matching.
+- **Extra packets are a live check, not a unit test:** `sample_data/extra/` runs against the real model through `scripts/live_check.py`. The fake LLM used by pytest only parses "Label: value" lines, so the free-text packet isn't part of the offline suite.
 - **Narrative check limits:** the snapshot isn't checked fact by fact; it only goes through the banned-word and status checks. The prompt limits it to the known fields.
 - **Out of scope:** no OCR or scanned PDFs, no bounding-box highlighting (optional in the brief), no `.docx` or images, no mailbox, auth, database or deployment.
 - **Data persistence:** results aren't kept. Refreshing the page or choosing New submission discards the review, by design.
@@ -239,7 +261,8 @@ app/        main.py (routes) · pipeline.py · ingest.py · schedule.py · extra
             normalize.py · reconcile.py · rules.py · narrative.py · models.py
 static/     index.html (single page, no build step)
 tests/      pytest suite + fake_llm.py (test double) + pdfgen.py (builds test PDFs)
-sample_data/            copy of the three supplied sample packets
+sample_data/            copy of the three supplied sample packets; extra/ holds six harder packets of my own
+scripts/                make_extra_samples.py (builds extra/) · live_check.py (runs packets against the real model)
 candidate_materials/    the assignment materials as supplied
 DEMO_SCRIPT.md          5–10 minute demo-video script
 ```

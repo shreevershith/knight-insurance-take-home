@@ -5,6 +5,7 @@ value null and every alternative kept with its evidence.
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from .models import FIELD_LABELS, Alternative, Evidence, FieldResult, FieldState, Mention, Override
@@ -31,6 +32,8 @@ def reconcile_field(
     groups: dict[object, list[Mention]] = {}
     for m in valid:
         groups.setdefault(comparison_key(m.normalized), []).append(m)
+    if name == "operations_description":
+        groups = _merge_rewordings(groups, notes)
 
     if failed_sources and stated:
         notes.append(
@@ -88,6 +91,36 @@ def reconcile_field(
         excerpt_or_observation=f"No value found in: {inspected}",
     )]
     return FieldResult(**base, value=None, state=FieldState.MISSING, evidence=evidence, notes=notes)
+
+
+_STOPWORDS = {"a", "an", "the", "of", "and", "for", "to", "in", "on", "with", "by", "its", "their", "our"}
+
+
+def _content_words(text: str) -> frozenset:
+    return frozenset(w for w in re.findall(r"[a-z0-9]+", text.casefold()) if w not in _STOPWORDS)
+
+
+def _merge_rewordings(groups: dict, notes: list[str]) -> dict:
+    """Merge operations descriptions whose content words are a subset of another's.
+
+    "hauling building supplies" and "Hauling of building supplies" describe the same
+    operations; genuinely different descriptions still stay separate (CONFLICT).
+    """
+    merged: list[list] = []
+    for key, ms in groups.items():
+        words = _content_words(str(ms[0].normalized))
+        for g in merged:
+            if words and (words <= g[0] or g[0] <= words):
+                g[0] = g[0] | words
+                g[1].extend(ms)
+                break
+        else:
+            merged.append([words, list(ms)])
+    if len(merged) < len(groups):
+        shown = sorted({m.display or str(m.normalized) for g in merged for m in g[1]})
+        notes.append("Worded differently across sources, treated as the same description: "
+                     + " / ".join(f"'{d}'" for d in shown) + ".")
+    return {i: g[1] for i, g in enumerate(merged)}
 
 
 # ---------------------------------------------------------------- overrides

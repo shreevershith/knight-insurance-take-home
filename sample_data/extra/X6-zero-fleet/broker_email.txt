@@ -1,0 +1,16 @@
+From: Jordan Example <broker@example.com>
+To: Underwriting Exercise <underwriting@example.com>
+Subject: Submission - startup
+
+Business name: Newstart Example LLC
+Requested effective date: 2027-01-15
+Garaging state: WA
+Operations: Courier start-up, vehicles not yet purchased.
+Declared vehicle count: 0
+Operating radius miles: 40
+Hazardous materials: No
+We will send loss runs once available.
+
+Thanks,
+Jordan Example
+Fictional Broker

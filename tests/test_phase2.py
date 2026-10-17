@@ -330,3 +330,34 @@ def test_validator_rejects_bare_label_lines():
     out = _good_output(issues)
     out.issue_lines = [f"{i.label}: " + ", ".join(i.values) for i in issues]  # e.g. 'Hazardous materials: No, Yes'
     assert any("not a complete sentence" in e for e in validate_narrative(out, issues, fields, overall))
+
+
+# ---------------------------------------------------------------- found by extra live packets
+@pytest.mark.parametrize("raw", ["120-mile", "a 120-mile radius", "120 mi.", "within 120 miles"])
+def test_radius_phrasings_from_prose(raw):
+    from app.normalize import normalize
+    n = normalize("operating_radius_miles", raw)
+    assert n.valid and n.value == 120
+
+
+def test_operations_rewording_is_not_a_conflict_but_real_difference_is():
+    from tests.helpers import field_from
+    same = field_from("operations_description", "Hauling of building supplies", "hauling building supplies")
+    assert same.state == FieldState.KNOWN and any("Worded differently" in n for n in same.notes)
+    assert len(same.evidence) == 2  # both sources kept as evidence
+    diff = field_from("operations_description", "Hauling of building supplies", "Refrigerated produce delivery")
+    assert diff.state == FieldState.CONFLICT
+
+
+def test_long_free_text_conflict_values_need_not_be_quoted():
+    from tests.helpers import base_fields, field_from
+    from app.pipeline import evaluate
+    fields = base_fields(operations_description=field_from(
+        "operations_description", "Hauling of building supplies across the region", "Refrigerated produce delivery service"))
+    ev = evaluate(fields)
+    issue = next(i for i in ev.issues if i.field == "operations_description")
+    out = NarrativeOutput(snapshot="Acme LLC requests a 2026-11-01 start.",
+                          issue_lines=["The operations description differs between the two documents provided."],
+                          email_subject="Request", email_body="Please confirm the operations description, which differs "
+                          "between the application and your email. Thank you, Underwriting team")
+    assert validate_narrative(out, [issue], fields, ev.overall_status) == []

@@ -246,6 +246,13 @@ def _mask(text: str, fields: Mapping[str, FieldResult]) -> str:
     return text
 
 
+MAX_QUOTED_VALUE = 30  # longer free-text values (e.g. operations) need only the field named
+
+
+def _quotable(values: list[str]) -> list[str]:
+    return [v for v in values if len(v) <= MAX_QUOTED_VALUE]
+
+
 def _mentions_field(issue: Issue, text: str) -> bool:
     low = text.casefold()
     return any(k in low for k in FIELD_KEYWORDS.get(issue.field or "", [issue.label.lower()]))
@@ -263,7 +270,7 @@ def validate_narrative(out: NarrativeOutput, issues: list[Issue], fields: Mappin
             errors.append(f"issue line {i} is not a complete sentence")
         if not _mentions_field(issue, line):
             errors.append(f"issue line {i} does not name the field '{issue.label}'")
-        for v in issue.values:
+        for v in _quotable(issue.values):
             if not _has_token(line, v):
                 errors.append(f"issue line {i} does not quote the value '{v}'")
     if issues:
@@ -275,7 +282,7 @@ def validate_narrative(out: NarrativeOutput, issues: list[Issue], fields: Mappin
             if not _mentions_field(issue, out.email_body):
                 errors.append(f"email body does not ask about '{issue.label}'")
             if issue.group == "Conflicting":
-                for v in issue.values:
+                for v in _quotable(issue.values):
                     if not _has_token(out.email_body, v):
                         errors.append(f"email body does not quote conflicting value '{v}' for {issue.label}")
 

@@ -25,14 +25,16 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 .hidden { display: none !important; }
 
 /* ---------- top bar ---------- */
-.top { position: sticky; top: 0; z-index: 10; background: var(--bg); height: 61px;
+.top { position: sticky; top: 0; z-index: 10; background: var(--bg); height: 53px;
   border-bottom: 1px solid var(--line); }
-.top-in { max-width: 1320px; margin: 0 auto; height: 60px; padding: 0 32px; display: flex; align-items: center; gap: 14px; }
-.mark { width: 22px; height: 22px; border-radius: var(--r); background: var(--ink); display: grid; place-items: center; color: #fff; font: 700 12px/1 var(--sans); }
-.brand { font-weight: 650; letter-spacing: -0.01em; }
-.brand-sub { color: var(--muted); font-size: 13px; }
+.top-in { max-width: 1320px; margin: 0 auto; height: 52px; padding: 0 32px; display: flex; align-items: center; gap: 10px; }
+.mark { width: 18px; height: 18px; border-radius: 2px; background: var(--ink); display: grid; place-items: center; color: #fff; font: 700 10.5px/1 var(--sans); }
+.brand { font-weight: 650; font-size: 14px; letter-spacing: -0.01em; }
+.sep { color: var(--line-2); font-size: 14px; }
+.brand-sub { color: var(--faint); font-size: 12px; }
 .spacer { flex: 1; }
-.model { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); padding: 5px 11px; border: 1px solid var(--line); border-radius: 2px; background: var(--surface); }
+.model { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); padding: 3px 9px; border: 1px solid var(--line); border-radius: 2px; background: var(--surface); }
+.model .mk { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex: none; }
 .dot.ok { background: var(--pass); } .dot.bad { background: var(--flag); } .dot.warn { background: var(--unk); }
 
@@ -42,7 +44,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
 /* ---------- packet panel ---------- */
 @media (max-width: 980px) { body.has-result .side .collapsible { display: none; } body.has-result .side h2 { margin-bottom: 6px; } }
-.side { position: sticky; top: 76px; align-self: start; }
+.side { position: sticky; top: 72px; align-self: start; }
 .eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .side h2 { font-size: 15px; margin: 6px 0 14px; }
 .drop { border: 1px dashed var(--line-2); border-radius: var(--r); padding: 22px 14px; text-align: center; background: var(--surface); cursor: pointer; transition: border-color .15s, background .15s; }
@@ -60,7 +62,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 textarea, input[type=text] { width: 100%; border: 1px solid var(--line-2); border-radius: var(--r); padding: 9px 11px; background: var(--surface); resize: vertical; }
 textarea:focus, input[type=text]:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px rgba(17,17,17,.06); }
 .side .actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 14px; }
-.note { font-size: 12px; color: var(--muted); margin: 14px 0 0; line-height: 1.5; }
+.note { font-size: 11.5px; color: var(--faint); margin: 14px 0 0; line-height: 1.5; }
 
 .btn { border: 1px solid var(--line-2); background: var(--surface); border-radius: var(--r); padding: 8px 14px; cursor: pointer; font-weight: 550; font-size: 13.5px; white-space: nowrap; transition: background .12s, border-color .12s; }
 .btn:hover { background: var(--hover); border-color: var(--faint); }
@@ -89,7 +91,7 @@ body { font-variant-numeric: tabular-nums; }
 .sec-hd .aside { color: var(--muted); font-size: 12.5px; }
 .sec-hd .right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.subnav { position: sticky; top: 61px; z-index: 5; background: var(--bg); display: flex; gap: 22px; padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: -24px; overflow-x: auto; }
+.subnav { position: sticky; top: 53px; z-index: 5; background: var(--bg); display: flex; gap: 22px; padding: 10px 0; border-bottom: 1px solid var(--line); margin-bottom: -24px; overflow-x: auto; }
 .subnav a { color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 550; white-space: nowrap; }
 .subnav a:hover { color: var(--ink); }
 .subnav .cnt { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: var(--r); background: var(--flag-bg); color: var(--flag); font-size: 11px; text-align: center; }
@@ -102,7 +104,18 @@ body { font-variant-numeric: tabular-nums; }
 .steps li { padding: 16px 16px 0 0; font-size: 13px; color: var(--ink-2); }
 .steps li b { display: block; font: 500 12px/1 var(--mono); color: var(--faint); margin-bottom: 8px; }
 @media (max-width: 700px) { .steps { grid-template-columns: 1fr 1fr; } .hero-empty h1 { font-size: 34px; } }
-.processing { padding: 64px 0; display: flex; gap: 16px; align-items: flex-start; }
+.processing { padding: 56px 0; display: flex; gap: 16px; align-items: flex-start; }
+.pipe { list-style: none; margin: 22px 0 0; padding: 0; border: 1px solid var(--line); background: var(--surface); max-width: 620px; position: relative; overflow: hidden; }
+.pipe::before { content: ""; position: absolute; left: 0; top: 0; height: 2px; width: 30%; background: var(--ink); animation: slide 1.4s ease-in-out infinite; }
+@keyframes slide { from { left: -30%; } to { left: 100%; } }
+.pipe li { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.pipe li:last-child { border-bottom: 0; }
+.pipe .no { font: 500 11.5px/1.7 var(--mono); color: var(--faint); }
+.pipe .who { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); align-self: center; }
+.pipe .who.llm { color: var(--ovr); }
+.elapsed { font: 500 12px/1 var(--mono); color: var(--muted); margin-top: 10px; }
+.pipeline-sum { grid-column: 1 / -1; font-size: 11.5px; color: var(--faint); }
+.pipeline-sum b { color: var(--muted); font-weight: 600; }
 .spinner { width: 20px; height: 20px; border: 2px solid var(--line-2); border-top-color: var(--ink); border-radius: 50%; animation: spin .8s linear infinite; flex: none; margin-top: 4px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .processing h2 { font-family: var(--serif); font-weight: 500; font-size: 26px; }
@@ -133,8 +146,8 @@ body { font-variant-numeric: tabular-nums; }
 .stat .l { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-top: 6px; }
 .stat.p .n, .stat.p .l { color: var(--pass); } .stat.f .n, .stat.f .l { color: var(--flag); } .stat.u .n, .stat.u .l { color: var(--unk); }
 .stat.zero .n, .stat.zero .l { color: var(--faint); }
-.disc { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 0 0; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
-.calls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--muted); }
+.disc { grid-column: 1 / -1; font-size: 11.5px; color: var(--faint); margin-top: -6px; }
+.calls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 11.5px; color: var(--faint); padding-top: 10px; border-top: 1px solid var(--line); }
 .calls span { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 760px) { .status { grid-template-columns: 1fr; } .status h1 { font-size: 36px; } .stats { border-left: 0; } .stat:first-child { padding-left: 0; } }
 
@@ -177,7 +190,7 @@ body { font-variant-numeric: tabular-nums; }
 .summary .grp h3 { font-size: 11.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
 .summary ul { margin: 0; padding-left: 18px; max-width: 860px; }
 .summary li { margin: 3px 0; }
-.summary .fine { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+.summary .fine { margin-top: 14px; color: var(--faint); font-size: 11.5px; }
 .tag-ai { color: var(--ink); background: var(--gray-bg); }
 .tag-tpl { color: var(--unk); background: var(--unk-bg); }
 .tag-stale { color: var(--unk); background: var(--unk-bg); }
@@ -221,7 +234,7 @@ body { font-variant-numeric: tabular-nums; }
 .alt .v { font-size: 20px; font-family: var(--serif); margin: 2px 0 6px; }
 .alt.bad { border-color: var(--line); background: var(--hover); }
 .vs { font-size: 12px; color: var(--muted); margin-top: 8px; }
-.notes { margin: 10px 0 0; padding-left: 16px; color: var(--muted); font-size: 12.5px; }
+.notes { margin: 10px 0 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
 .orig { margin-top: 8px; font-size: 12.5px; color: var(--muted); }
 .orig b { color: var(--ink-2); }
 .edit { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; padding: 12px; border: 1px solid var(--line-2); border-radius: var(--r); background: var(--surface); }
@@ -259,9 +272,10 @@ tr:last-child td { border-bottom: 0; }
   <div class="top-in">
     <div class="mark" aria-hidden="true">U</div>
     <span class="brand">Submission Review Assistant</span>
+    <span class="sep brand-sub" aria-hidden="true">/</span>
     <span class="brand-sub">Commercial auto · readiness for human review</span>
     <div class="spacer"></div>
-    <span class="model" title="Model used for extraction and the summary"><span class="dot" id="modelDot"></span><span id="modelText">Checking model…</span></span>
+    <span class="model" title="Model used for extraction and the summary"><span class="mk">Model</span><span class="dot" id="modelDot"></span><span id="modelText">Checking model…</span></span>
   </div>
 </header>
 
@@ -360,7 +374,7 @@ input.addEventListener("change", () => { addFiles(input.files); input.value = ""
 drop.addEventListener("drop", (e) => addFiles(e.dataTransfer.files));
 
 function resetResults() {
-  Object.assign(S, { result: null, fields: null, evaluation: null, narrative: null,
+  Object.assign(S, { result: null, fields: null, evaluation: null, narrative: null, elapsed: null,
                      narrativeStale: false, pendingRerun: false, editing: null });
   S.req++;  // any in-flight response for the old packet is ignored
 }
@@ -380,19 +394,33 @@ async function processPacket() {
   S.files.forEach((f) => fd.append("files", f, f.name));
   if (email.trim()) fd.append("email_text", email);
   $("processBtn").disabled = true;
+  const t0 = performance.now();
+  const clock = el("div", { class: "elapsed" }, "0.0 s elapsed");
+  const tick = setInterval(() => { clock.textContent = ((performance.now() - t0) / 1000).toFixed(1) + " s elapsed"; }, 100);
+  const step = (n, text, who) => el("li", {}, el("span", { class: "no" }, n), el("span", {}, text),
+    el("span", { class: "who" + (who === "Model" ? " llm" : "") }, who));
   $("results").replaceChildren(el("div", { class: "processing" }, el("div", { class: "spinner" }),
-    el("div", {}, el("h2", {}, "Reviewing the submission…"),
-      el("p", {}, "Reading files, extracting fields with the model, checking every excerpt against the source, running R1–R5 and drafting the summary. Usually 5–30 seconds."))));
+    el("div", { style: "flex:1;min-width:0" }, el("h2", {}, "Reviewing the submission…"),
+      el("p", {}, [S.files.length ? `${S.files.length} file(s)` : "", email.trim() ? "pasted email" : ""].filter(Boolean).join(" + ").replace(/^p/, "P") + ". The server runs these steps in order; results appear when all are done (usually 5–30 s).`),
+      el("ol", { class: "pipe", "aria-label": "Processing steps" },
+        step("01", "Read files and detect each document's type from its heading", "Code"),
+        step("02", "Count vehicles in the CSV and check for a loss runs report", "Code"),
+        step("03", "Extract the 7 fields from each document, one call per document", "Model"),
+        step("04", "Verify every excerpt and value against the source text", "Code"),
+        step("05", "Normalize values, reconcile sources, run R1–R5", "Code"),
+        step("06", "Write the summary and draft email from the structured result", "Model")),
+      clock)));
   try {
     const r = await api("/api/process", { method: "POST", body: fd });
     if (my !== S.req) return;
+    S.elapsed = (performance.now() - t0) / 1000;
     S.result = r; S.fields = r.fields; S.narrative = r.narrative;
     S.evaluation = { rules: r.rules, overall_status: r.overall_status, rule_counts: r.rule_counts, issues: r.issues, disclaimer: r.disclaimer };
     render(); toResults();
   } catch (e) {
     if (my !== S.req) return;
     showError("Processing failed", e.message);
-  } finally { $("processBtn").disabled = false; }
+  } finally { clearInterval(tick); $("processBtn").disabled = false; }
 }
 function toResults() {  // wide: top of page; narrow (stacked): top of the results
   const top = $("results").getBoundingClientRect().top + window.scrollY - 70;
@@ -458,12 +486,27 @@ function statusHero() {
       cell(ev.rule_counts.FLAG, "Rules flagged", "Flag", "FLAG", "f"),
       cell(ev.rule_counts.UNKNOWN, "Rules unresolved", "Unknown", "UNKNOWN", "u")),
     el("div", { class: "disc" }, ev.disclaimer),
+    pipelineSummary(),
     el("div", { class: "calls" },
       r.extraction.map((x) => el("span", {}, el("span", { class: "dot " + (x.status === "ok" ? "ok" : "bad") }),
         `Extraction · ${x.source_file}: ${x.status === "ok" ? "ok" : "failed (" + x.error_kind + ")"}`)),
       el("span", {}, el("span", { class: "dot " + (n.source === "model" ? "ok" : "warn") }),
         "Summary & draft: " + (n.source === "model" ? "model" : "template")),
       el("span", {}, `${r.model.provider || "no model"} · ${r.model.model || "—"}`)));
+}
+
+function pipelineSummary() {
+  const r = S.result, ok = r.extraction.filter((x) => x.status === "ok");
+  const kept = r.extraction.reduce((a, x) => a + x.mentions_kept, 0), dropped = r.extraction.reduce((a, x) => a + x.mentions_discarded, 0);
+  const parts = [
+    `${r.inventory.length} file(s) read`,
+    `${ok.length}/${r.extraction.length} model extraction(s) ok`,
+    `${kept} mention(s) verified` + (dropped ? `, ${dropped} discarded` : ""),
+    "R1–R5 evaluated",
+    "summary: " + (S.narrative.source === "model" ? "model" : "template"),
+  ];
+  if (S.elapsed) parts.push(S.elapsed.toFixed(1) + " s");
+  return el("div", { class: "pipeline-sum" }, el("b", {}, "Pipeline "), parts.join(" · "));
 }
 
 function failures() {

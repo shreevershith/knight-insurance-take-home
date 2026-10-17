@@ -140,7 +140,7 @@ _COUNT_RE = re.compile(
     rf"^{_NUM}\s*(?:vehicles?|units?|power units?|trucks?|vans?|autos?)?\.?$", re.I
 )
 _RADIUS_RE = re.compile(
-    rf"^(?:within|up to)?\s*{_NUM}\s*(?:miles?|mi\.?)?(?:\s*radius)?\.?$", re.I
+    rf"^(?:within|up to)?\s*(?:an?\s+)?{_NUM}(?:\s*-\s*|\s*)(?:miles?|mi\.?)?(?:\s*radius)?\.?$", re.I
 )
 
 
@@ -192,7 +192,17 @@ def normalize_bool(raw: Any) -> NormResult:
         return _ok(True, "Yes")
     if s in _FALSE:
         return _ok(False, "No")
+    # A sentence that opens with an explicit answer ("No hazardous materials are transported")
+    # counts, unless the rest hedges it ("Yes, occasionally", "No, except fuel").
+    m = _LEADING_ANSWER.match(s)
+    if m and not _HEDGES.search(m.group(2)):
+        return _ok(m.group(1) == "yes", "Yes" if m.group(1) == "yes" else "No")
     return _bad(f"'{_clean(raw)}' is not an explicit Yes/No answer (ambiguous)")
+
+
+_LEADING_ANSWER = re.compile(r"^(yes|no)\b[\s,.:;!-]*(.*)$")
+_HEDGES = re.compile(r"\b(yes|no|not|or|occasional\w*|sometimes|some|may|might|possibl\w*|unless|except\w*|but|rarely|seasonal\w*|"
+                     r"limited|small|minor|unsure|unknown|tbd|pending|depends|n/?a)\b")
 
 
 NORMALIZERS: dict[str, Callable[[Any], NormResult]] = {

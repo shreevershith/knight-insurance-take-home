@@ -1,0 +1,15 @@
+From: Jordan Example <broker@example.com>
+To: Underwriting Exercise <underwriting@example.com>
+Subject: Submission - unnamed fleet
+
+Requested effective date: 2026-10-30
+Garaging state: AZ
+Operations: Produce delivery.
+Declared vehicle count: 6
+Operating radius miles: 100
+Hazardous materials: No
+Correction from the insured: the fleet is actually 7 vehicles.
+
+Thanks,
+Jordan Example
+Fictional Broker
