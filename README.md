@@ -203,7 +203,7 @@ The model reads documents and writes prose. Code decides every value, state, rul
 ## Tests
 
 ```bash
-python -m pytest -q        # 175 passed (about 4 s, no network, no API key)
+python -m pytest -q        # 176 passed (about 4 s, no network, no API key)
 ```
 
 No test calls a live model. `tests/fake_llm.py` is a test-only stand-in injected through the FastAPI dependency (`app.dependency_overrides`) or passed directly. It **derives its answers from the text it receives**: a label/value line parser for extraction, and the structured payload for the narrative. It also has failure modes: timeout, 429, bad JSON, missing keys, a hallucinated value, banned words, a wrong status, a dropped issue.

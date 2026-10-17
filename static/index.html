@@ -401,7 +401,7 @@ async function processPacket() {
     el("span", { class: "who" + (who === "Model" ? " llm" : "") }, who));
   $("results").replaceChildren(el("div", { class: "processing" }, el("div", { class: "spinner" }),
     el("div", { style: "flex:1;min-width:0" }, el("h2", {}, "Reviewing the submission…"),
-      el("p", {}, [S.files.length ? `${S.files.length} file(s)` : "", email.trim() ? "pasted email" : ""].filter(Boolean).join(" + ").replace(/^p/, "P") + ". The server runs these steps in order; results appear when all are done (usually 5–30 s).`),
+      el("p", {}, [S.files.length ? `${S.files.length} file(s)` : "", email.trim() ? "pasted email" : ""].filter(Boolean).join(" + ").replace(/^p/, "P") + ". The server runs these steps in order; results appear when all are done (usually 5–30 s)."),
       el("ol", { class: "pipe", "aria-label": "Processing steps" },
         step("01", "Read files and detect each document's type from its heading", "Code"),
         step("02", "Count vehicles in the CSV and check for a loss runs report", "Code"),
