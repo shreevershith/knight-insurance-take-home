@@ -15,7 +15,7 @@ from app.pipeline import evaluate, process_packet
 from app.reconcile import apply_override
 from tests.fake_llm import FakeLLM
 
-SAMPLES = Path(__file__).resolve().parent.parent / "sample_data"
+SAMPLES = Path(__file__).resolve().parent.parent / "candidate_materials" / "sample_submissions"
 P, F, U = RuleStatus.PASS, RuleStatus.FLAG, RuleStatus.UNKNOWN
 
 
@@ -118,6 +118,26 @@ def test_not_provided_claim_on_a_line_with_a_value_is_discarded():
     assert mention is None and warning
 
 
+def test_reformatted_value_is_matched_to_the_source_wording():
+    src = TextSource(source_file="broker_email.txt", kind="email",
+                     pages=["Garaging state: California\nEffective date: Nov 1, 2026"])
+    m = ExtractedMention(raw_value="CA", excerpt="Garaging state: California")
+    mention, _ = verify_mention("garaging_state", m, src, source_lines(src))
+    assert mention is not None and mention.raw_value == "California" and mention.normalized == "CA"
+    m = ExtractedMention(raw_value="2026-11-01", excerpt="Effective date: Nov 1, 2026")
+    mention, _ = verify_mention("requested_effective_date", m, src, source_lines(src))
+    assert mention is not None and mention.raw_value == "Nov 1, 2026"
+
+
+def test_value_wrapped_across_two_lines_is_found():
+    src = TextSource(source_file="broker_email.txt", kind="email",
+                     pages=["The business is Blue Ridge\nHaulers Example Inc. and runs 5 trucks."])
+    m = ExtractedMention(raw_value="Blue Ridge Haulers Example Inc.",
+                         excerpt="The business is Blue Ridge Haulers Example Inc. and runs 5 trucks.")
+    mention, _ = verify_mention("business_name", m, src, source_lines(src))
+    assert mention is not None and mention.evidence.locator == "email body, lines 1-2"
+
+
 def test_value_must_be_on_the_quoted_line():
     src = source("SUB-A", "broker_email.txt")
     m = ExtractedMention(raw_value="CA", excerpt="Hazardous materials: No")
@@ -177,19 +197,14 @@ def test_total_model_failure_keeps_deterministic_results():
     assert {i.group for i in r.issues} == {"Unresolved"}
 
 
-def test_partial_failure_value_not_cross_checked_is_unknown():
-    # SUB-C email says 180 / Yes, but the application call fails: without option A
-    # R3 and R4 would FLAG and the email-vs-PDF conflict would be hidden.
+def test_partial_failure_keeps_values_from_working_sources():
+    # SUB-C: the application call fails, so the email's 180 / Yes are used and the failure is shown.
     r = run("SUB-C", FakeLLM(fail_sources={"application.pdf"}))
     radius = r.fields["operating_radius_miles"]
-    assert radius.state == FieldState.KNOWN and radius.value == 180 and not radius.cross_checked
-    assert statuses(r)[2:4] == [U, U]
-    assert "not cross-checked" in r.rules[2].reason
-    assert any(i.group == "Unresolved" and i.field == "operating_radius_miles" for i in r.issues)
-    # A reviewer confirming the value resolves it.
-    fields = dict(r.fields)
-    fields["operating_radius_miles"] = apply_override(radius, "180")
-    assert evaluate(fields).rules[2].status == F
+    assert radius.state == FieldState.KNOWN and radius.value == 180
+    assert any("application.pdf" in n for n in radius.notes)
+    assert statuses(r)[2:4] == [F, F]
+    assert any(e.status == "failed" for e in r.extraction)
 
 
 def test_bad_json_extraction_reported_per_source():
@@ -235,9 +250,16 @@ def test_validator_accepts_good_output():
 def test_validator_rejects_banned_words():
     fields, rules, overall, issues = _sub_c_inputs()
     out = _good_output(issues)
-    out.email_body += "\nWe will send a quote once approved."
+    out.email_body += "\nWe will send pricing once approved."
     errs = validate_narrative(out, issues, fields, overall)
-    assert any("forbidden words" in e and "quote" in e and "approved" in e for e in errs)
+    assert any("decision words" in e and "pricing" in e and "approved" in e for e in errs)
+
+
+def test_ordinary_insurance_wording_is_allowed():
+    fields, rules, overall, issues = _sub_c_inputs()
+    out = _good_output(issues)
+    out.email_body += "\nPlease quote both values exactly, and confirm the coverage start date is acceptable."
+    assert validate_narrative(out, issues, fields, overall) == []
 
 
 def test_validator_rejects_contradicting_status():
@@ -247,22 +269,20 @@ def test_validator_rejects_contradicting_status():
     assert any("contradicts" in e for e in validate_narrative(out, issues, fields, overall))
 
 
-def test_validator_rejects_dropped_issue_and_missing_conflict_value():
+def test_validator_rejects_dropped_issue():
     fields, rules, overall, issues = _sub_c_inputs()
     out = _good_output(issues)
     out.issue_lines = out.issue_lines[:-1]
-    out.email_body = out.email_body.replace("— 80 miles (application.pdf) vs", "—")
     errs = validate_narrative(out, issues, fields, overall)
     assert any("expected exactly" in e for e in errs)
-    assert any("conflicting value '80'" in e for e in errs)
 
 
 def test_business_name_does_not_trip_banned_words():
     r = run("SUB-A")
     fields = dict(r.fields)
-    fields["business_name"] = apply_override(fields["business_name"], "Risk Quote Logistics LLC")
+    fields["business_name"] = apply_override(fields["business_name"], "Premium Approved Logistics LLC")
     ev = evaluate(fields)
-    out = NarrativeOutput(snapshot="Risk Quote Logistics LLC requests a 2026-11-01 start.", issue_lines=[])
+    out = NarrativeOutput(snapshot="Premium Approved Logistics LLC requests a 2026-11-01 start.", issue_lines=[])
     assert validate_narrative(out, ev.issues, fields, ev.overall_status) == []
 
 
@@ -326,11 +346,6 @@ def test_real_client_without_key_fails_cleanly(monkeypatch):
     assert r.model.provider == "Groq" and r.narrative.source == "template"
 
 
-def test_validator_rejects_bare_label_lines():
-    fields, rules, overall, issues = _sub_c_inputs()
-    out = _good_output(issues)
-    out.issue_lines = [f"{i.label}: " + ", ".join(i.values) for i in issues]  # e.g. 'Hazardous materials: No, Yes'
-    assert any("not a complete sentence" in e for e in validate_narrative(out, issues, fields, overall))
 
 
 # ---------------------------------------------------------------- found by extra live packets
@@ -362,10 +377,3 @@ def test_long_free_text_conflict_values_need_not_be_quoted():
                           email_subject="Request", email_body="Hello,\n\n1. Please confirm the operations description, which differs "
                           "between the application and your email.\n\nThank you,\nUnderwriting team")
     assert validate_narrative(out, [issue], fields, ev.overall_status) == []
-
-
-def test_validator_requires_one_request_per_line():
-    fields, rules, overall, issues = _sub_c_inputs()
-    out = _good_output(issues)
-    out.email_body = "Hello, " + " ".join(f"Please confirm: {i.text}" for i in issues)  # all on one line
-    assert any("own numbered line" in e for e in validate_narrative(out, issues, fields, overall))

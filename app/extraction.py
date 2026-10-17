@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from .ingest import TextSource
 from .llm import LLMClient, LLMError
 from .models import EXTRACTED_FIELDS, Evidence, Mention
-from .normalize import normalize
+from .normalize import comparison_key, normalize
 
 FUZZY_THRESHOLD = 0.85
 MIN_FUZZY_LEN = 8
@@ -135,6 +135,7 @@ class SourceLine:
     page: Optional[int]  # PDF page number; None for email
     line_no: int  # 1-based line within the email, or within the PDF page
     text: str
+    line_end: Optional[int] = None  # set when a value wraps onto the next line
 
 
 def source_lines(source: TextSource) -> list[SourceLine]:
@@ -151,43 +152,84 @@ def source_lines(source: TextSource) -> list[SourceLine]:
     return out
 
 
+def _line_pairs(lines: list[SourceLine]) -> list[SourceLine]:
+    """Adjacent lines joined, for a value that wraps across a line break."""
+    return [SourceLine(a.page, a.line_no, f"{a.text} {b.text}", line_end=b.line_no)
+            for a, b in zip(lines, lines[1:]) if a.page == b.page]
+
+
 def locator(source: TextSource, line: SourceLine) -> str:
-    return f"PDF page {line.page}" if source.kind == "pdf" else f"email body, line {line.line_no}"
+    if source.kind == "pdf":
+        return f"PDF page {line.page}"
+    if line.line_end:
+        return f"email body, lines {line.line_no}-{line.line_end}"
+    return f"email body, line {line.line_no}"
 
 
-def _value_on_line(m: ExtractedMention, line_norm: str) -> bool:
+MAX_SPAN_EXTRA_WORDS = 3
+
+
+def value_span(field_name: str, m: ExtractedMention, line_text: str) -> Optional[str]:
+    """The span of the line that states the mention's value, or None.
+
+    The model's raw value is first looked for literally. If it was reformatted
+    ("CA" for "California", "2026-11-01" for "Nov 1, 2026"), a span of the line
+    whose normalized value equals the raw value's is accepted instead, so the
+    value must still be derivable from the line itself.
+    """
+    line_norm = norm(line_text)
     if m.explicitly_not_provided:
-        return bool(NOT_PROVIDED_RE.search(line_norm))
+        return "" if NOT_PROVIDED_RE.search(line_norm) else None
     raw = norm(m.raw_value or "")
     if not raw:
-        return False
-    return re.search(rf"(?<![a-z0-9]){re.escape(raw)}(?![a-z0-9])", line_norm) is not None
+        return None
+    if re.search(rf"(?<![a-z0-9]){re.escape(raw)}(?![a-z0-9])", line_norm):
+        return m.raw_value
+    want = normalize(field_name, m.raw_value)
+    if not want.valid:
+        return None
+    words = line_text.split()
+    longest = len(raw.split()) + MAX_SPAN_EXTRA_WORDS
+    for size in range(1, longest + 1):
+        for i in range(len(words) - size + 1):
+            span = " ".join(words[i:i + size]).strip(" .,;:()")
+            got = normalize(field_name, span)
+            if got.valid and comparison_key(got.value) == comparison_key(want.value):
+                return span
+    return None
 
 
-def find_line(m: ExtractedMention, lines: list[SourceLine]) -> Optional[SourceLine]:
-    """The source line the mention came from, or None if it cannot be verified.
+def find_line(field_name: str, m: ExtractedMention,
+              lines: list[SourceLine]) -> Optional[tuple[SourceLine, str]]:
+    """The source line the mention came from and the span stating its value, or None.
 
     1. exact (normalized) excerpt contained in a line, 2. close fuzzy match of
-    the excerpt to a line. Either way the value itself must be on that line,
-    so a near-copy of a real line with a different number is rejected.
+    the excerpt to a line; single lines first, then two adjacent lines joined.
+    Either way the value itself must be on that line, so a near-copy of a real
+    line with a different number is rejected.
     """
     ex = norm(m.excerpt)
     if not ex:
         return None
-    normed = [(ln, norm(ln.text)) for ln in lines]
-    for ln, n in normed:
-        if ex in n and _value_on_line(m, n):
-            return ln
-    if len(ex) < MIN_FUZZY_LEN:
-        return None
-    best, best_ratio = None, 0.0
-    for ln, n in normed:
-        if not _value_on_line(m, n):
+    for candidates in (lines, _line_pairs(lines)):
+        normed = [(ln, norm(ln.text)) for ln in candidates]
+        for ln, n in normed:
+            if ex in n:
+                span = value_span(field_name, m, ln.text)
+                if span is not None:
+                    return ln, span
+        if len(ex) < MIN_FUZZY_LEN:
             continue
-        ratio = difflib.SequenceMatcher(None, ex, n).ratio()
-        if ratio > best_ratio:
-            best, best_ratio = ln, ratio
-    return best if best_ratio >= FUZZY_THRESHOLD else None
+        best, best_ratio = None, 0.0
+        for ln, n in normed:
+            ratio = difflib.SequenceMatcher(None, ex, n).ratio()
+            if ratio >= FUZZY_THRESHOLD and ratio > best_ratio:
+                span = value_span(field_name, m, ln.text)
+                if span is not None:
+                    best, best_ratio = (ln, span), ratio
+        if best is not None:
+            return best
+    return None
 
 
 def verify_mention(field_name: str, m: ExtractedMention, source: TextSource,
@@ -195,17 +237,18 @@ def verify_mention(field_name: str, m: ExtractedMention, source: TextSource,
     """Return (verified Mention, None) or (None, warning)."""
     if not m.explicitly_not_provided and not (m.raw_value or "").strip():
         return None, f"{source.source_file}: {field_name} mention had no value — ignored."
-    line = find_line(m, lines)
-    if line is None:
+    found = find_line(field_name, m, lines)
+    if found is None:
         shown = "'not provided'" if m.explicitly_not_provided else f"'{m.raw_value}'"
         return None, (f"{source.source_file}: model value {shown} for {field_name} not found in source — ignored.")
+    line, span = found
     ev = Evidence(source_file=source.source_file, locator=locator(source, line),
                   excerpt_or_observation=line.text)
     if m.explicitly_not_provided:
         return Mention(field=field_name, source_file=source.source_file,
                        explicitly_not_provided=True, evidence=ev), None
-    n = normalize(field_name, m.raw_value)
-    return Mention(field=field_name, source_file=source.source_file, raw_value=m.raw_value,
+    n = normalize(field_name, span)  # the source's own wording, not the model's
+    return Mention(field=field_name, source_file=source.source_file, raw_value=span,
                    valid=n.valid, normalized=n.value, display=n.display, error=n.error,
                    evidence=ev), None
 

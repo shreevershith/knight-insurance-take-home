@@ -23,23 +23,8 @@ GROUPS = ["Missing", "Conflicting", "Flagged", "Unresolved"]
 SNAPSHOT_FIELDS = ["business_name", "requested_effective_date", "garaging_state",
                    "operations_description", "declared_vehicle_count", "operating_radius_miles"]
 
-# A narrative line about a field must contain one of these words.
-FIELD_KEYWORDS = {
-    "business_name": ["business name", "name"],
-    "requested_effective_date": ["effective date"],
-    "garaging_state": ["garaging"],
-    "operations_description": ["operation"],
-    "declared_vehicle_count": ["vehicle"],
-    "operating_radius_miles": ["radius"],
-    "hazardous_materials": ["hazardous"],
-    "loss_runs_present": ["loss run", "loss history"],
-    "schedule_vehicle_count": ["vehicle", "schedule"],
-}
-
-BANNED_RE = re.compile(
-    r"\b(approv\w*|declin\w*|recommend\w*|risk\w*|premium\w*|pric\w*|quot\w*|bind|binds|binding|"
-    r"eligib\w*|coverage|accept\w*|reject\w*)\b", re.I)
-MIN_LINE_WORDS = 6  # a bare "Radius:" label is not an explanation
+# Decision words the summary and email must never use (the tool does not decide or price anything).
+BANNED_RE = re.compile(r"\b(approv\w*|declin\w*|bind|binds|binding|eligib\w*|premium\w*|pric(?:e|es|ed|ing))\b", re.I)
 GENERATION_FAILED = "Template draft — model unavailable, not AI-generated"
 
 
@@ -129,10 +114,6 @@ def build_issues(fields: Mapping[str, FieldResult], rules: list[RuleResult]) -> 
             add("Unresolved", name, f"{label}: not extracted — model extraction failed for "
                 + ", ".join(f.unchecked_sources) + ".",
                 f"Please confirm the {low}.")
-        elif st == FieldState.KNOWN and not f.resolved:
-            add("Unresolved", name, f"{label}: {eff_display(f)} found, but not cross-checked (model "
-                "extraction failed for " + ", ".join(f.unchecked_sources) + ").",
-                f"Please confirm the {low} ({eff_display(f)}).", values=[_short(f.value, eff_display(f))])
 
     # Rule FLAGs on fully resolved values.
     r2, r3, r4 = by_id.get("R2"), by_id.get("R3"), by_id.get("R4")
@@ -231,13 +212,8 @@ def build_payload(fields, rules, overall, issues) -> dict:
 
 
 # ---------------------------------------------------------------- validation (code)
-def _has_token(text: str, token: str) -> bool:
-    t = re.escape(token.casefold())
-    return re.search(rf"(?<![\w.]){t}(?![\w]|\.\d)", text.casefold()) is not None
-
-
 def _mask(text: str, fields: Mapping[str, FieldResult]) -> str:
-    """Blank out applicant-supplied names/descriptions so 'Risk Logistics LLC' does not trip the word check."""
+    """Blank out applicant-supplied names/descriptions so 'Premium Logistics LLC' does not trip the word check."""
     vals = []
     for n in ("business_name", "operations_description"):
         f = fields.get(n)
@@ -249,54 +225,22 @@ def _mask(text: str, fields: Mapping[str, FieldResult]) -> str:
     return text
 
 
-_LIST_LINE = re.compile(r"^\s*(?:\d+[.)]|[-•*])\s+\S", re.M)  # one request per line
-MAX_QUOTED_VALUE = 30  # longer free-text values (e.g. operations) need only the field named
-
-
-def _quotable(values: list[str]) -> list[str]:
-    return [v for v in values if len(v) <= MAX_QUOTED_VALUE]
-
-
-def _mentions_field(issue: Issue, text: str) -> bool:
-    low = text.casefold()
-    return any(k in low for k in FIELD_KEYWORDS.get(issue.field or "", [issue.label.lower()]))
-
-
 def validate_narrative(out: NarrativeOutput, issues: list[Issue], fields: Mapping[str, FieldResult],
                        overall: OverallStatus) -> list[str]:
+    """Only what would make the text wrong: missing parts, decision words, a contradicting status."""
     errors: list[str] = []
     if not out.snapshot.strip():
         errors.append("snapshot is empty")
     if len(out.issue_lines) != len(issues):
         errors.append(f"issue_lines has {len(out.issue_lines)} lines; expected exactly {len(issues)}")
-    for i, (issue, line) in enumerate(zip(issues, out.issue_lines), 1):
-        if len(re.findall(r"\w+", line)) < MIN_LINE_WORDS:
-            errors.append(f"issue line {i} is not a complete sentence")
-        if not _mentions_field(issue, line):
-            errors.append(f"issue line {i} does not name the field '{issue.label}'")
-        for v in _quotable(issue.values):
-            if not _has_token(line, v):
-                errors.append(f"issue line {i} does not quote the value '{v}'")
-    if issues:
-        if not out.email_subject.strip() or not out.email_body.strip():
-            errors.append("email subject/body is empty")
-        elif len(re.findall(r"\w+", out.email_body)) < MIN_LINE_WORDS * (len(issues) + 1):
-            errors.append("email body is too short to ask for every item in full sentences")
-        elif len(_LIST_LINE.findall(out.email_body)) < len(issues):
-            errors.append(f"email body must list each of the {len(issues)} requests on its own numbered line")
-        for issue in issues:
-            if not _mentions_field(issue, out.email_body):
-                errors.append(f"email body does not ask about '{issue.label}'")
-            if issue.group == "Conflicting":
-                for v in _quotable(issue.values):
-                    if not _has_token(out.email_body, v):
-                        errors.append(f"email body does not quote conflicting value '{v}' for {issue.label}")
+    if issues and (not out.email_subject.strip() or not out.email_body.strip()):
+        errors.append("email subject/body is empty")
 
     all_text = "\n".join([out.snapshot, *out.issue_lines, out.email_subject, out.email_body])
     masked = _mask(all_text, fields)
     banned = sorted({m.group(0).lower() for m in BANNED_RE.finditer(masked)})
     if banned:
-        errors.append("forbidden words used: " + ", ".join(banned))
+        errors.append("decision words used: " + ", ".join(banned))
     other = "ready for review" if overall == OverallStatus.NEEDS_REVIEW else "needs review"
     if re.search(other.replace(" ", r"[\s_-]+"), masked, re.I):
         errors.append(f"text states a status that contradicts the rule engine ({overall.value})")

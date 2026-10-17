@@ -25,7 +25,7 @@ cp .env.example .env            # PowerShell: Copy-Item .env.example .env
 uvicorn app.main:app --port 8000
 ```
 
-Open http://localhost:8000, drop in the files from one folder in `sample_data/` (e.g. `sample_data/SUB-C/`), or paste a broker email, and click **Process submission**.
+Open http://localhost:8000, drop in the files from one folder in `candidate_materials/sample_submissions/` (e.g. `SUB-C/`), or paste a broker email, and click **Process submission**.
 
 Tests (no API key or network needed):
 
@@ -69,14 +69,14 @@ The model reads documents and writes prose. Code decides every value, state, rul
 
 ## Design decisions
 
-- **Evidence is verified in code.** A value is kept only if its quoted line and the value itself are found in the source text. Page and line numbers are computed, not taken from the model. Anything that can't be found is discarded with a visible warning.
+- **Evidence is verified in code.** A value is kept only if its quoted line is found in the source and the value can be read from that line, either literally or after normalizing ("CA" matches "California"; a value that wraps onto the next line is matched across the two). The stored value is the source's own wording, not the model's. Page and line numbers are computed, not taken from the model. Anything that can't be found is discarded with a visible warning.
 - **Conflicts are never resolved silently.** Two different values give CONFLICT with no value, keeping both alternatives and their evidence, until a reviewer corrects it. "Not provided" in one source next to a value in another is not a conflict. Harmless differences are normalized first (150 = 150.0, CA = California).
-- **NOT_EXTRACTED.** If a model call fails, a field with no value is NOT_EXTRACTED rather than MISSING, because absence was never checked. A value found only in the sources that worked is marked "not cross-checked", and the rules treat it as UNKNOWN, so a failed call can't hide a conflict.
+- **NOT_EXTRACTED.** If a model call fails, a field with no value is NOT_EXTRACTED rather than MISSING, because absence was never checked, and the rules treat it as UNKNOWN. Values from the sources that did work are used, with a note naming the failed source, and the failure is shown on the page.
 - **Rules are pure code**, exactly as in `rules.json`. R1 FLAG for a missing value takes precedence; R2–R4 return UNKNOWN for unresolved values before any threshold or Yes/No test.
 - **Corrections** are validated by the same normalizer, labelled HUMAN OVERRIDE, and keep the original value and evidence. **Rerun checks** recalculates the rules with no model call; the summary is then marked stale until regenerated.
 - **Stateless server.** No session or database; each request carries its own data, so one packet can't leak into another.
 - **Prompt injection.** Document text is wrapped in random markers and marked untrusted, the summary step never sees documents, model output must still pass evidence and narrative checks, and the page renders document text as plain text only.
-- **Narrative checks.** One sentence per issue, naming the field and quoting its values; the email asks for every issue, one per line; no decision words (approve, decline, recommend, risk, premium, price, quote, bind, eligible, coverage, accept, reject); no status that contradicts the rules. On failure: one retry, then a template labelled "not AI-generated".
+- **Narrative checks.** Code checks only what would make the text wrong: one line per issue, an email when there are issues, no decision words (approve, decline, bind, eligible, premium, price), and no status that contradicts the rules. On failure: one retry, then a template labelled "not AI-generated".
 - **Loss runs** count only when a readable document's heading says loss runs or loss history; a zero-claims report counts, an email promise does not. An unreadable or unidentifiable PDF makes R5 UNKNOWN.
 
 Notes on the materials: "eight business fields" is read as the 7 text fields plus `loss_runs_present`, with `schedule_vehicle_count` as the derived count. No other inconsistencies found.
@@ -86,7 +86,7 @@ Notes on the materials: "eight business fields" is read as the 7 text fields plu
 ### Unit tests (no model)
 
 ```bash
-python -m pytest -q     # 193 passed: 109 test functions, several run over lists of inputs
+python -m pytest -q     # 194 passed: 110 test functions, several run over lists of inputs
 ```
 
 No test calls a live model. A fake model (`tests/fake_llm.py`) answers from the text it is given, so nothing is hard-coded per sample. Coverage includes: R1–R5 edge cases (missing beats conflict, 150 / 150.0 / 150.1, 0 = 0, conflicts before thresholds, email promise vs report), normalization and CSV handling, conflict and missing semantics, discarding a made-up value, model failures and retries, narrative checks, corrections and rerun, packet isolation, and SUB-A/B/C end to end.
@@ -99,13 +99,13 @@ Live results on the supplied samples (Groq `openai/gpt-oss-120b`), matching the 
 | SUB-B | FLAG (no date) | PASS (2 = 2) | UNKNOWN (missing) | UNKNOWN (missing) | FLAG (promise only) | NEEDS_REVIEW |
 | SUB-C | PASS | FLAG (4 vs 3) | UNKNOWN (180 vs 80) | UNKNOWN (Yes vs No) | FLAG | NEEDS_REVIEW |
 
-### Live checks with the real model (17 packets)
+### Live checks with the real model (9 packets)
 
 ```bash
-python scripts/live_check.py     # needs LLM_API_KEY; prints one line per packet and a 17/17 tally
+python scripts/live_check.py     # needs LLM_API_KEY; prints one line per packet and a tally
 ```
 
-This runs the three supplied samples plus 14 packets of my own in `sample_data/extra/`, each with an `expected.json` worked out from `rules.json` beforehand. T1–T8 are short broker emails across different states and outcomes (the 150 / 150.1 boundary, prose with "three trucks", an impossible date and a radius in km, a non-US state, a correction later in the email, a broker asking for approval, email only). X1–X6 are harder packets (a prose email with values on PDF page 2, format variants, invalid values, a prompt-injection email, a conflict within one email, zero vehicles). All 17 match, and no summary or email contains decision words. `python scripts/make_extra_samples.py` rebuilds the packets.
+This runs the three supplied samples plus six packets of my own in `sample_data/`, each with an `expected.json` worked out from `rules.json` beforehand: the 150.1-mile boundary with hazmat Yes (T2), an email with name and date "Not provided" (T8), a prose email with values on PDF page 2 (X1), a prompt-injection email (X4), a conflict within one email (X5) and zero vehicles (X6). All 9 match, every summary and email came from the model (no template fallback), and none contains decision words. `python scripts/make_extra_samples.py` rebuilds the six packets.
 
 ## Time spent
 
@@ -114,8 +114,8 @@ About 6¾ hours on Saturday, October 17, 2026 (first to last commit), plus readi
 ## Known limitations
 
 - Ollama is supported through env but was not tested.
-- Evidence matching is line by line: a value split across two PDF lines, or rewritten by the model (e.g. "CA" for "California"), is discarded with a warning rather than matched.
-- "Not cross-checked" applies when a whole model call fails, not per field.
+- Evidence matching looks at one line or two adjacent lines; a value spread wider than that is discarded with a warning.
+- When one source's model call fails, values from the other sources are used without being compared to it (the failure is shown).
 - Business names, and operations descriptions that differ by more than small words, show as conflicts; there is no meaning-based matching.
 - The summary paragraph is checked for forbidden words and status, not fact by fact.
 - Out of scope: OCR / scanned PDFs, bounding-box highlighting, mailbox, authentication, storage, deployment.

@@ -8,7 +8,7 @@ from app.rules import rule_r5
 from app.schedule import derive_schedule_count, parse_schedule
 from tests.pdfgen import make_pdf
 
-SAMPLES = Path(__file__).resolve().parent.parent / "sample_data"
+SAMPLES = Path(__file__).resolve().parent.parent / "candidate_materials" / "sample_submissions"
 HEADER = "vehicle_id,vin,year,make,model"
 
 

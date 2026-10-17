@@ -493,7 +493,7 @@ function failures() {
   if (failed.length) box.append(el("div", { class: "alert err", role: "alert" },
     el("b", {}, `Model extraction failed for ${failed.length} of ${r.extraction.length} source(s)`),
     el("ul", {}, failed.map((x) => el("li", {}, `${x.source_file}: ${x.message || x.error_kind}`))),
-    el("div", { style: "margin-top:6px" }, "Inventory, schedule count and loss runs are still evaluated. Fields that could not be checked are marked Not extracted or not cross-checked — you can enter corrections and rerun the checks.")));
+    el("div", { style: "margin-top:6px" }, "Inventory, schedule count and loss runs are still evaluated. Fields that could not be checked are marked Not extracted — you can enter corrections and rerun the checks.")));
   if (r.warnings.length) box.append(el("div", { class: "alert warn" }, el("b", {}, "Evidence warnings"),
     el("ul", {}, r.warnings.map((w) => el("li", {}, w)))));
   return box.childElementCount ? box : document.createDocumentFragment();
@@ -552,8 +552,7 @@ function rulesSection() {
       el("div", {}, el("div", { class: "nm" }, r.name), el("div", { class: "why" }, r.reason),
         el("div", { class: "in" }, r.inputs_used.map((i) => el("span", {},
           `${i.field} = `, fmtVal(i.value), ` · ${(STATE_WORD[i.state] || i.state).toUpperCase()}`,
-          i.override ? pill("Human override", "OVERRIDE", true) : null,
-          !i.cross_checked ? pill("Not cross-checked", "neutral", true) : null)))),
+          i.override ? pill("Human override", "OVERRIDE", true) : null)))),
       el("div", { class: "st" }, pill(`${r.id} ${r.status}`, r.status)))));
 }
 function fmtVal(v) {
@@ -584,8 +583,7 @@ function fieldRow(f) {
   const vline = el("div", { class: "vline" },
     known && f.effective_display != null ? el("span", { class: "val" }, f.effective_display)
       : el("span", { class: "val none" }, f.effective_state === "CONFLICT" ? "Unresolved — sources disagree" : f.effective_state === "MISSING" ? (ov ? "Confirmed absent" : "Not found in any source") : "No usable value"),
-    ov ? pill("Human override", "OVERRIDE") : pill(STATE_WORD[f.state] || f.state, f.state),
-    !ov && f.state === "KNOWN" && !f.cross_checked ? pill("Not cross-checked", "neutral") : null);
+    ov ? pill("Human override", "OVERRIDE") : pill(STATE_WORD[f.state] || f.state, f.state));
   const main = el("div", {}, vline);
   if (ov) main.append(el("div", { class: "orig" }, "Original extraction: ",
     el("b", {}, f.state === "KNOWN" ? (f.display ?? String(f.value)) : (STATE_WORD[f.state] || f.state)), " — kept below for reference."));

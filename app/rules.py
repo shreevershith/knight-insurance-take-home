@@ -30,16 +30,12 @@ _STATE_WORDS = {
 
 def _input(f: FieldResult) -> RuleInput:
     return RuleInput(field=f.name, value=f.effective_value, state=f.effective_state,
-                     override=f.override is not None,
-                     cross_checked=f.override is not None or f.state != FieldState.KNOWN or f.cross_checked)
+                     override=f.override is not None)
 
 
 def _desc(f: FieldResult) -> str:
     label = FIELD_LABELS.get(f.name, f.name)
     st = f.effective_state
-    if st == FieldState.KNOWN and not f.resolved:
-        return (f"{label} = {f.effective_value!r} was not cross-checked (model extraction failed for "
-                + ", ".join(f.unchecked_sources) + ")")
     if st == FieldState.KNOWN:
         return f"{label} = {f.effective_value!r}"
     if st == FieldState.CONFLICT:

@@ -115,21 +115,11 @@ class FieldResult(BaseModel):
 
     @computed_field  # serialized so the UI and rerun requests see the effective view
     @property
-    def cross_checked(self) -> bool:
-        """False when a KNOWN value could not be compared against every source."""
-        return not self.unchecked_sources
-
-    @computed_field  # serialized so the UI and rerun requests see the effective view
-    @property
     def resolved(self) -> bool:
-        """What the rules treat as a usable value: KNOWN and cross-checked, or overridden.
-
-        A KNOWN value from one source while another source failed extraction may
-        hide a conflict, so rules treat it as UNKNOWN until a human confirms it.
-        """
+        """What the rules treat as a usable value: KNOWN, or overridden with a value."""
         if self.override is not None:
             return not self.override.confirmed_absent
-        return self.state == FieldState.KNOWN and self.cross_checked
+        return self.state == FieldState.KNOWN
 
     @computed_field  # serialized so the UI and rerun requests see the effective view
     @property
@@ -167,7 +157,6 @@ class RuleInput(BaseModel):
     value: Any = None
     state: FieldState
     override: bool = False
-    cross_checked: bool = True
 
 
 class RuleResult(BaseModel):

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.main import app, get_llm
 from tests.fake_llm import FakeLLM
 
-SAMPLES = Path(__file__).resolve().parent.parent / "sample_data"
+SAMPLES = Path(__file__).resolve().parent.parent / "candidate_materials" / "sample_submissions"
 
 
 @pytest.fixture

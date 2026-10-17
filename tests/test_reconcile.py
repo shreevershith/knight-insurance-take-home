@@ -52,4 +52,4 @@ def test_intra_source_disagreement_is_conflict():
 def test_failed_source_not_extracted_vs_missing():
     assert field_from("operating_radius_miles", failed=["application.pdf"]).state == FieldState.NOT_EXTRACTED
     f = field_from("operating_radius_miles", "100", failed=["application.pdf"])
-    assert f.state == FieldState.KNOWN and any("not cross-checked" in n for n in f.notes)
+    assert f.state == FieldState.KNOWN and any("only from the sources that were read" in n for n in f.notes)

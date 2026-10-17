@@ -38,8 +38,7 @@ def reconcile_field(
     if failed_sources and stated:
         notes.append(
             "Model extraction failed for " + ", ".join(failed_sources)
-            + "; this value was not cross-checked against that source, so rules treat it as"
-            " UNKNOWN until a reviewer confirms it."
+            + "; this value comes only from the sources that were read."
         )
     if absent and stated:
         notes.append(

@@ -1,11 +1,11 @@
 """Live check: run packets through the real pipeline (model from .env) and compare R1-R5 with the expected results.
 
 Runs the three supplied samples (expected results from the assignment) and every packet in
-sample_data/extra/ (each with its own expected.json). Calls the configured model for real, so it
+sample_data/ (each with its own expected.json). Calls the configured model for real, so it
 needs LLM_API_KEY; the pytest suite never does.
 
 Usage:
-  python scripts/live_check.py                # all 17
+  python scripts/live_check.py                # all 9
   python scripts/live_check.py SUB-C X4-injection   # only the named packets
   python scripts/live_check.py -v             # also print fields and evidence for every packet
 """
@@ -32,9 +32,9 @@ SUPPLIED = {
 
 args = [a for a in sys.argv[1:] if a != "-v"]
 verbose = "-v" in sys.argv
-packets = [(pathlib.Path("sample_data") / n, exp) for n, exp in SUPPLIED.items()]
+packets = [(pathlib.Path("candidate_materials/sample_submissions") / n, exp) for n, exp in SUPPLIED.items()]
 packets += [(d, json.loads((d / "expected.json").read_text())["rules"])
-            for d in sorted(pathlib.Path("sample_data/extra").iterdir()) if d.is_dir()]
+            for d in sorted(pathlib.Path("sample_data").iterdir()) if d.is_dir()]
 if args:
     packets = [(d, e) for d, e in packets if d.name in args]
 
