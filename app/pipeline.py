@@ -1,5 +1,18 @@
 """ingest -> extract (LLM) -> verify evidence -> reconcile -> rules -> narrate (LLM, validated).
 
+process_packet, in order ([model] = LLM call, everything else is plain code):
+  1. ingest      text per PDF page / email, document type from the heading, inventory,
+                 schedule_vehicle_count and loss_runs_present (done in ingest_packet)
+  2. extract     [model] one call per document -> raw value + quoted line per field
+  3. verify      quoted line and value must be in the source; value re-read from the
+                 source's own wording; locator computed; anything else discarded
+  4. normalize   dates, states, counts, radius, Yes/No (also used for reviewer corrections)
+  5. reconcile   per field across sources -> KNOWN / MISSING / CONFLICT / INVALID / NOT_EXTRACTED
+  6. rules       R1-R5 and overall status (evaluate; also what Rerun checks calls)
+  7. issues      action items from the rule results
+  8. narrate     [model] summary + broker email from the structured result only,
+                 then validated -> one retry -> labelled template fallback
+
 Stateless: every call builds its result from the request inputs only.
 """
 from __future__ import annotations

@@ -3,6 +3,13 @@
 Every request carries everything it needs (uploaded files, or the field results
 the browser already holds), and nothing is stored server-side, so one packet's
 data can never leak into another.
+
+Routes, and the UI action that calls each one (static/index.html):
+  GET  /api/config     page load          provider and model name for the header
+  POST /api/process    Process submission full pipeline (pipeline.process_packet); model calls
+  POST /api/override   Save / Revert      validate one correction with the normalizer; no model
+  POST /api/rerun      Rerun checks       rules, status and action items only; no model
+  POST /api/narrative  Regenerate         rules, then summary + email; model call
 """
 from __future__ import annotations
 

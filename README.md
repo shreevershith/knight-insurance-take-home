@@ -67,6 +67,28 @@ FastAPI (app/main.py) → pipeline.py
 
 The model reads documents and writes prose. Code decides every value, state, rule result and issue.
 
+### What happens on each click
+
+| Click | Request (`static/index.html` → `app/main.py`) | What runs | Model call? |
+|---|---|---|---|
+| Process submission | `POST /api/process` | The full pipeline below | Yes: one per document, plus one for the summary and email |
+| Save (correction) | `POST /api/override` | `reconcile.apply_override`: the same normalizer as extraction validates the value (`far` is rejected); the original value and evidence are kept | No |
+| Rerun checks | `POST /api/rerun` | `pipeline.evaluate`: R1–R5, overall status and action items on the corrected fields | No |
+| Regenerate | `POST /api/narrative` | `pipeline.evaluate`, then `narrative.generate_narrative` on the results | Yes: summary and email only |
+
+Inside Process submission, in order:
+
+1. **Read files** (`ingest.py`, code). Text from each PDF page and email body; each file's type from its heading; the attachment inventory.
+2. **Derived fields** (code). `schedule_vehicle_count` = nonblank CSV data rows after the header (`schedule.py`); `loss_runs_present` = a readable document headed Loss Runs / Loss History is attached (`ingest.derive_loss_runs`).
+3. **Extract** (`extraction.py`, model). One call per document, with the text between random markers and labelled untrusted. The model returns a raw value and the line it quoted for each field.
+4. **Verify** (`extraction.verify_mention`, code). The quoted line must be found in the source (one line, or two adjacent lines) and the value must be readable from it. The stored value is the source's own wording; the page or line number is computed. Anything else is discarded with a warning.
+5. **Normalize** (`normalize.py`, code). `California` → `CA`, `Nov 1, 2026` → `2026-11-01`, `150.0` → `150`, `Y` → `true`; invalid values are marked INVALID.
+6. **Reconcile** (`reconcile.py`, code). Across sources: agree → KNOWN, differ → CONFLICT (both kept, neither chosen), absent everywhere → MISSING, model call failed → NOT_EXTRACTED.
+7. **Rules** (`rules.py`, code). R1–R5 exactly as in `rules.json`, then READY_FOR_REVIEW only if all five pass.
+8. **Action items** (`narrative.build_issues`, code). One item per FLAG or UNKNOWN, built from the rule result.
+9. **Summary and email** (`narrative.py`, model). The model sees only the structured results, never the documents.
+10. **Check the prose** (`narrative.validate_narrative`, code). No decision words, no contradicting status, an email when there are issues; otherwise one retry, then a template labelled "not AI-generated".
+
 ## Design decisions
 
 - **Evidence is verified in code.** A value is kept only if its quoted line is found in the source and the value can be read from that line, either literally or after normalizing ("CA" matches "California"; a value that wraps onto the next line is matched across the two). The stored value is the source's own wording, not the model's. Page and line numbers are computed, not taken from the model. Anything that can't be found is discarded with a visible warning.
